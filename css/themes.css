@@ -1,0 +1,32 @@
+/* ===== THEMES.CSS ===== */
+
+/* VARIABLES */
+:root {
+  --radius: 16px;
+  --bg-main: #0f172a;
+  --bg-card: #111827;
+  --bg-accent: #1e293b;
+
+  --text-main: #e5e7eb;
+  --text-muted: #9ca3af;
+
+  --primary: #3b82f6;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+}
+
+/* LIGHT THEME */
+body.light {
+  --bg-main: #f8fafc;
+  --bg-card: #fff;
+  --bg-accent: #e5e7eb;
+
+  --text-main: #111827;
+  --text-muted: #6b7280;
+
+  --primary: #3b82f6;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+}
