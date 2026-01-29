@@ -5,50 +5,243 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>💳 Мой Финансовый Контроль</title>
 
-<!-- PWA -->
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/icon-192.png">
-<meta name="theme-color" content="#020617">
+<style>
+/* ===== VARIABLES ===== */
+:root {
+  --radius: 16px;
+  --bg-main: #0f172a;
+  --bg-card: #111827;
+  --bg-accent: #1e293b;
+  --text-main: #e5e7eb;
+  --text-muted: #9ca3af;
+  --primary: #3b82f6;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+}
 
-<!-- CSS -->
-<link rel="stylesheet" href="css/main.css">
-<link rel="stylesheet" href="css/themes.css">
-<link rel="stylesheet" href="css/animations.css">
+/* LIGHT THEME */
+body.light {
+  --bg-main: #f8fafc;
+  --bg-card: #fff;
+  --bg-accent: #e5e7eb;
+  --text-main: #111827;
+  --text-muted: #6b7280;
+}
 
+/* ===== RESET ===== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html, body {
+  height: 100%;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg-main);
+  color: var(--text-main);
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* HEADER */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 16px;
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+header h1 {
+  font-size: 22px;
+  font-weight: 700;
+}
+#balance {
+  font-size: 18px;
+  font-weight: 600;
+}
+/* Иконка темы */
+#themeToggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+/* CATEGORY SLIDER */
+#categories {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 16px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 24px;
+}
+#categories::-webkit-scrollbar {
+  display: none;
+}
+
+/* CARD STYLING */
+.cat {
+  min-width: calc(100vw - 64px);
+  max-width: calc(100vw - 64px);
+  height: 200px;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  scroll-snap-align: start;
+  padding: 24px;
+  background: linear-gradient(135deg, var(--primary), var(--success));
+  box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.cat::before {
+  content: "💰";
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 28px;
+  opacity: 0.2;
+}
+.cat:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(0,0,0,0.5);
+}
+.cat b {
+  font-size: 20px;
+  font-weight: 700;
+}
+.cat small {
+  opacity: 0.8;
+  font-size: 14px;
+}
+
+/* MODALS */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-main);
+  display: none;
+  flex-direction: column;
+  z-index: 200;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.3s ease;
+}
+.modal.show {
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
+}
+.modal .top {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--bg-accent);
+}
+.modal .content {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* RECORDS LIST */
+ul#recordsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+ul#recordsList li {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--bg-accent);
+  opacity: 0;
+  transform: translateX(-10px);
+  animation: fadeIn 0.3s forwards;
+}
+ul#recordsList li span.trash {
+  cursor: pointer;
+  color: var(--danger);
+  transition: 0.3s;
+}
+ul#recordsList li span.trash:hover {
+  transform: scale(1.2);
+}
+
+/* INPUTS AND BUTTONS */
+input, select, button {
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-top: 8px;
+  background: var(--bg-accent);
+  color: var(--text-main);
+}
+input:focus, select:focus, button:focus {
+  outline: 2px solid var(--primary);
+}
+
+/* QUICK BUTTONS */
+.quick {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.quick button {
+  flex: 1;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* RESPONSIVE MOBILE */
+@media (max-width: 480px) {
+  .cat { min-width: calc(100vw - 48px); height: 180px; }
+  header h1 { font-size: 20px; }
+  #balance { font-size: 16px; }
+}
+
+/* ANIMATION KEYFRAMES */
+@keyframes fadeIn {
+  to { opacity: 1; transform: translateX(0); }
+}
+</style>
 </head>
+
 <body class="dark">
 
 <header>
   <h1>💳 Финансовый Контроль</h1>
   <div id="balance">Баланс: 0 ₸</div>
-  <!-- Иконка смены темы -->
   <div id="themeToggle" onclick="UI.toggleTheme()">🌙</div>
 </header>
 
-<!-- Горизонтальная лента категорий -->
+<!-- CATEGORY CARDS -->
 <div id="categories"></div>
 
-<!-- Модальное окно для операций -->
+<!-- MODAL -->
 <div class="modal" id="modal">
   <div class="top">
-    <b id="modalTitle"></b>
+    <b id="modalTitle">Новая операция</b>
     <span onclick="UI.closeModal()">✕</span>
   </div>
   <div class="content">
-    <div class="month-filter">
-      <select id="monthFilter" onchange="Filters.filterByMonth(this.value)">
-        <option value="all">Все месяцы</option>
-      </select>
-    </div>
-
     <input id="amount" type="number" placeholder="Сумма">
     <input id="comment" placeholder="Комментарий">
-
     <div class="quick">
       <button onclick="Records.quickAdd(1000)">+1000</button>
       <button onclick="Records.quickAdd(5000)">+5000</button>
     </div>
-
     <button onclick="Records.add()">Добавить</button>
 
     <input id="searchInput" type="text" placeholder="Поиск..." oninput="Filters.search(this.value)">
@@ -58,57 +251,74 @@
     </select>
 
     <ul id="recordsList"></ul>
-
-    <button onclick="ExportData.exportJSON()">Экспорт JSON</button>
   </div>
 </div>
-
-<!-- Модальное окно для PIN -->
-<div class="modal" id="pinModal">
-  <div class="top"><b>Введите PIN</b></div>
-  <div class="content">
-    <input id="pinInput" type="password" placeholder="PIN">
-    <button onclick="Auth.checkPin()">Войти</button>
-  </div>
-</div>
-
-<!-- Модальное окно для создания категории -->
-<div class="modal" id="createCategoryModal">
-  <div class="top"><b>Новая категория</b> <span onclick="UI.closeCreate()">✕</span></div>
-  <div class="content">
-    <input id="newCategoryName" placeholder="Название категории">
-    <select id="newCategoryType">
-      <option value="income">Доход</option>
-      <option value="spent">Расход</option>
-      <option value="debt">Долг</option>
-    </select>
-    <input type="color" id="newCategoryColor" value="#60a5fa">
-    <button onclick="Categories.create()">Создать категорию</button>
-  </div>
-</div>
-
-<!-- JS -->
-<script src="js/storage.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/categories.js"></script>
-<script src="js/records.js"></script>
-<script src="js/balance.js"></script>
-<script src="js/filters.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/export.js"></script>
-<script src="js/analytics.js"></script>
-<script src="js/app.js"></script>
 
 <script>
+// ===================== JS =====================
 const UI = {
   toggleTheme() {
     document.body.classList.toggle("dark");
     document.body.classList.toggle("light");
-    const icon = document.getElementById("themeToggle");
-    icon.textContent = document.body.classList.contains("dark") ? "🌙" : "☀️";
+    document.getElementById("themeToggle").textContent = document.body.classList.contains("dark") ? "🌙" : "☀️";
   },
-  closeModal() { document.getElementById('modal').classList.remove('show'); },
-  closeCreate() { document.getElementById('createCategoryModal').classList.remove('show'); }
+  closeModal() { document.getElementById('modal').classList.remove('show'); }
+};
+
+const Records = {
+  data: [],
+  add() {
+    const amount = document.getElementById("amount").value;
+    const comment = document.getElementById("comment").value;
+    if(!amount) return alert("Введите сумму");
+    const record = { amount: +amount, comment };
+    this.data.push(record);
+    this.render();
+    document.getElementById("amount").value = "";
+    document.getElementById("comment").value = "";
+  },
+  quickAdd(value) {
+    document.getElementById("amount").value = value;
+  },
+  render() {
+    const ul = document.getElementById("recordsList");
+    ul.innerHTML = "";
+    this.data.forEach((r, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${r.comment} (${r.amount} ₸)</span> <span class="trash" onclick="Records.delete(${i})">🗑️</span>`;
+      ul.appendChild(li);
+    });
+  },
+  delete(i) {
+    if(confirm("Удалить запись?")) {
+      this.data.splice(i,1);
+      this.render();
+    }
+  }
+};
+
+// Создаем примерные карточки
+const categories = [
+  {name:"Доход", icon:"💵"},
+  {name:"Расход", icon:"🛒"},
+  {name:"Долг", icon:"💳"}
+];
+const container = document.getElementById("categories");
+categories.forEach(c=>{
+  const div = document.createElement("div");
+  div.className="cat";
+  div.innerHTML=`<b>${c.name}</b><small>${c.icon}</small>`;
+  container.appendChild(div);
+});
+
+const Filters = {
+  search(value){
+    // Для начала пусто, только выводим консоль
+    console.log("Поиск: ", value);
+  },
+  sort(value){
+    console.log("Сортировка: ", value);
+  }
 };
 </script>
 
