@@ -1,272 +1,115 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>💳 Финансовый Контроль</title>
-
-<meta name="theme-color" content="#020617">
+<title>💳 Мой Финансовый Контроль</title>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#020617">
 
 <!-- CSS -->
 <link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="css/themes.css">
 <link rel="stylesheet" href="css/animations.css">
-</head>
 
+</head>
 <body class="dark">
 
-<!-- ================= PIN ================= -->
-<div class="modal show" id="pinModal">
-  <div class="top">
-    <b>Введите PIN</b>
-  </div>
-  <div class="content">
-    <input id="pinInput" type="password" placeholder="PIN">
-    <button onclick="Auth.login()">Войти</button>
-  </div>
-</div>
-
-<!-- ================= HEADER ================= -->
 <header>
   <h1>💳 Финансовый Контроль</h1>
   <div id="balance">Баланс: 0 ₸</div>
-  <button class="ghost" onclick="UI.toggleTheme()">Сменить тему</button>
+  <!-- Иконка смены темы -->
+  <div id="themeToggle" onclick="UI.toggleTheme()">🌙</div>
 </header>
 
-<!-- ================= CATEGORY SLIDER ================= -->
+<!-- Горизонтальная лента категорий -->
 <div id="categories"></div>
 
-<!-- ================= RECORD MODAL ================= -->
-<div class="modal" id="recordModal">
+<!-- Модальное окно для операций -->
+<div class="modal" id="modal">
   <div class="top">
     <b id="modalTitle"></b>
-    <span class="close" onclick="UI.close()">✕</span>
+    <span onclick="UI.closeModal()">✕</span>
   </div>
-
   <div class="content">
-
-    <select id="monthSelect"></select>
+    <div class="month-filter">
+      <select id="monthFilter" onchange="Filters.filterByMonth(this.value)">
+        <option value="all">Все месяцы</option>
+      </select>
+    </div>
 
     <input id="amount" type="number" placeholder="Сумма">
     <input id="comment" placeholder="Комментарий">
 
     <div class="quick">
-      <button onclick="Records.quick(1000)">+1000</button>
-      <button onclick="Records.quick(5000)">+5000</button>
+      <button onclick="Records.quickAdd(1000)">+1000</button>
+      <button onclick="Records.quickAdd(5000)">+5000</button>
     </div>
 
     <button onclick="Records.add()">Добавить</button>
 
-    <input placeholder="Поиск" oninput="Filters.search(this.value)">
-
-    <select onchange="Filters.sort(this.value)">
-      <option value="new">Сначала новые</option>
-      <option value="old">Сначала старые</option>
+    <input id="searchInput" type="text" placeholder="Поиск..." oninput="Filters.search(this.value)">
+    <select id="sortSelect" onchange="Filters.sort(this.value)">
+      <option value="newest">Сначала новые</option>
+      <option value="oldest">Сначала старые</option>
     </select>
 
-    <ul id="records"></ul>
+    <ul id="recordsList"></ul>
 
-    <button class="danger" onclick="Export.backup()">Экспорт JSON</button>
-
+    <button onclick="ExportData.exportJSON()">Экспорт JSON</button>
   </div>
 </div>
 
-<!-- ================= JS ================= -->
+<!-- Модальное окно для PIN -->
+<div class="modal" id="pinModal">
+  <div class="top"><b>Введите PIN</b></div>
+  <div class="content">
+    <input id="pinInput" type="password" placeholder="PIN">
+    <button onclick="Auth.checkPin()">Войти</button>
+  </div>
+</div>
+
+<!-- Модальное окно для создания категории -->
+<div class="modal" id="createCategoryModal">
+  <div class="top"><b>Новая категория</b> <span onclick="UI.closeCreate()">✕</span></div>
+  <div class="content">
+    <input id="newCategoryName" placeholder="Название категории">
+    <select id="newCategoryType">
+      <option value="income">Доход</option>
+      <option value="spent">Расход</option>
+      <option value="debt">Долг</option>
+    </select>
+    <input type="color" id="newCategoryColor" value="#60a5fa">
+    <button onclick="Categories.create()">Создать категорию</button>
+  </div>
+</div>
+
+<!-- JS -->
+<script src="js/storage.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/categories.js"></script>
+<script src="js/records.js"></script>
+<script src="js/balance.js"></script>
+<script src="js/filters.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/export.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/app.js"></script>
+
 <script>
-/* =================================================
-   STORAGE
-================================================= */
-const Storage = {
-  data: JSON.parse(localStorage.getItem("finance_test")) || {
-    pin: "1234",
-    theme: "dark",
-    categories: [
-      { id: 1, name: "Доход", type: "income", color: "#22c55e" },
-      { id: 2, name: "Расход", type: "spent", color: "#ef4444" },
-      { id: 3, name: "Долг", type: "debt", color: "#eab308" }
-    ],
-    records: []
-  },
-  save() {
-    localStorage.setItem("finance_test", JSON.stringify(this.data));
-  }
-};
-
-/* =================================================
-   AUTH
-================================================= */
-const Auth = {
-  login() {
-    if (pinInput.value === Storage.data.pin) {
-      pinModal.classList.remove("show");
-    } else {
-      alert("Неверный PIN");
-    }
-  }
-};
-
-/* =================================================
-   UI
-================================================= */
 const UI = {
-  currentCat: null,
-
-  open(cat) {
-    this.currentCat = cat;
-    modalTitle.innerText = cat.name;
-    recordModal.classList.add("show");
-    Records.render();
-  },
-
-  close() {
-    recordModal.classList.remove("show");
-  },
-
   toggleTheme() {
-    document.body.classList.toggle("light");
     document.body.classList.toggle("dark");
-  }
-};
-
-/* =================================================
-   CATEGORIES
-================================================= */
-function renderCategories() {
-  categories.innerHTML = "";
-
-  Storage.data.categories.forEach(cat => {
-    const el = document.createElement("div");
-    el.className = "cat";
-    el.style.background = cat.color;
-    el.innerHTML = `
-      <b>${cat.name}</b>
-      <small>${cat.type}</small>
-    `;
-    el.onclick = () => UI.open(cat);
-    categories.appendChild(el);
-  });
-}
-
-/* =================================================
-   RECORDS
-================================================= */
-const Records = {
-  add() {
-    if (!amount.value) return;
-
-    Storage.data.records.push({
-      id: Date.now(),
-      cat: UI.currentCat.id,
-      sum: +amount.value,
-      text: comment.value,
-      date: new Date().toISOString()
-    });
-
-    amount.value = "";
-    comment.value = "";
-
-    Storage.save();
-    this.render();
-    Balance.update();
+    document.body.classList.toggle("light");
+    const icon = document.getElementById("themeToggle");
+    icon.textContent = document.body.classList.contains("dark") ? "🌙" : "☀️";
   },
-
-  quick(v) {
-    amount.value = (+amount.value || 0) + v;
-  },
-
-  render() {
-    records.innerHTML = "";
-
-    let list = Storage.data.records.filter(
-      r => r.cat === UI.currentCat.id
-    );
-
-    list.forEach(r => {
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <span>${r.sum} ₸ — ${r.text}</span>
-        <span class="trash" onclick="Records.del(${r.id})">🗑</span>
-      `;
-      records.appendChild(li);
-    });
-
-    records.scrollTop = records.scrollHeight;
-  },
-
-  del(id) {
-    if (!confirm("Удалить запись?")) return;
-    Storage.data.records = Storage.data.records.filter(r => r.id !== id);
-    Storage.save();
-    this.render();
-    Balance.update();
-  }
+  closeModal() { document.getElementById('modal').classList.remove('show'); },
+  closeCreate() { document.getElementById('createCategoryModal').classList.remove('show'); }
 };
-
-/* =================================================
-   FILTERS
-================================================= */
-const Filters = {
-  sort(type) {
-    Storage.data.records.sort((a, b) =>
-      type === "new" ? b.id - a.id : a.id - b.id
-    );
-    Records.render();
-  },
-
-  search(text) {
-    document.querySelectorAll("#records li").forEach(li => {
-      li.style.display = li.innerText.toLowerCase().includes(text.toLowerCase())
-        ? ""
-        : "none";
-    });
-  }
-};
-
-/* =================================================
-   BALANCE
-================================================= */
-const Balance = {
-  update() {
-    let inc = 0, spent = 0, debt = 0;
-
-    Storage.data.records.forEach(r => {
-      const type = Storage.data.categories.find(c => c.id === r.cat).type;
-      if (type === "income") inc += r.sum;
-      if (type === "spent") spent += r.sum;
-      if (type === "debt") debt += r.sum;
-    });
-
-    balance.innerText = `Баланс: ${inc - spent - debt} ₸`;
-  }
-};
-
-/* =================================================
-   EXPORT
-================================================= */
-const Export = {
-  backup() {
-    const blob = new Blob(
-      [JSON.stringify(Storage.data, null, 2)],
-      { type: "application/json" }
-    );
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "finance-backup.json";
-    a.click();
-  }
-};
-
-/* =================================================
-   INIT
-================================================= */
-renderCategories();
-Balance.update();
 </script>
 
 </body>
