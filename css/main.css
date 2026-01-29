@@ -1,0 +1,159 @@
+/* ===== MAIN.CSS ===== */
+
+/* Сброс */
+* {
+  box-sizing: border-box;
+}
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg-main);
+  color: var(--text-main);
+  scroll-behavior: smooth;
+}
+
+/* HEADER */
+header {
+  position: sticky;
+  top: 0;
+  background: var(--bg-main);
+  padding: 16px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+header h1 {
+  font-size: 22px;
+  font-weight: 700;
+}
+#balance {
+  font-size: 18px;
+  font-weight: 600;
+}
+header button {
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  transition: 0.3s;
+}
+header button:hover {
+  opacity: 0.9;
+}
+
+/* CATEGORY SLIDER */
+#categories {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 16px;
+  scroll-snap-type: x mandatory;
+}
+#categories::-webkit-scrollbar {
+  display: none;
+}
+
+/* CARD STYLING */
+.cat {
+  min-width: 240px;
+  max-width: 280px;
+  height: 120px;
+  border-radius: var(--radius);
+  padding: 16px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  scroll-snap-align: start;
+  background: var(--bg-card);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.cat:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+}
+.cat b {
+  font-size: 20px;
+  font-weight: 700;
+}
+.cat small {
+  opacity: 0.7;
+  font-size: 14px;
+}
+
+/* MODALS */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-main);
+  display: none;
+  flex-direction: column;
+  z-index: 200;
+}
+.modal.show { display: flex; }
+.modal .top {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--bg-accent);
+}
+.modal .content {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* RECORDS LIST */
+ul#records {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+ul#records li {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--bg-accent);
+}
+ul#records li span.trash {
+  cursor: pointer;
+  color: var(--danger);
+  transition: 0.3s;
+}
+ul#records li span.trash:hover {
+  transform: scale(1.2);
+}
+
+/* INPUTS AND BUTTONS */
+input, select, button {
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-top: 8px;
+  background: var(--bg-accent);
+  color: var(--text-main);
+  border: none;
+}
+input:focus, select:focus, button:focus {
+  outline: 2px solid var(--primary);
+}
+
+/* QUICK BUTTONS */
+.quick {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.quick button {
+  flex: 1;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+.quick button:hover {
+  opacity: 0.9;
+}
