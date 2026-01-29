@@ -3,361 +3,544 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NeoBank - Личный Финансовый Трекер</title>
+    <title>NeoBank Ultimate</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap');
+        
+        :root {
+            --bg-light: #f3f4f6;
+            --bg-dark: #0f172a;
+        }
+
+        body { font-family: 'Manrope', sans-serif; transition: background-color 0.3s, color 0.3s; }
         
         /* Скроллбар */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #c7c7c7; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; }
 
         /* Анимации */
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
         
-        .modal { transition: opacity 0.25s ease; }
-        body.modal-active { overflow-x: hidden; overflow-y: hidden !important; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; opacity: 0; transform: translateY(10px); }
+        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+        /* Для скрытия блоков */
+        .hidden-force { display: none !important; }
     </style>
-    
+
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        primary: '#4F46E5', // Indigo 600
-                        secondary: '#10B981', // Emerald 500
-                        danger: '#EF4444', // Red 500
-                        dark: '#1F2937'
+                        primary: '#6366f1', // Indigo 500
+                        darkBg: '#0f172a',  // Slate 900
+                        darkCard: '#1e293b' // Slate 800
                     }
                 }
             }
         }
     </script>
 </head>
-<body class="text-gray-800 h-screen flex overflow-hidden">
+<body class="bg-gray-100 dark:bg-darkBg text-gray-800 dark:text-gray-100 h-screen overflow-hidden select-none">
 
-    <aside class="w-64 bg-white shadow-xl hidden md:flex flex-col z-10">
-        <div class="h-20 flex items-center justify-center border-b border-gray-100">
-            <i class="fa-solid fa-wallet text-3xl text-primary mr-2"></i>
-            <h1 class="text-2xl font-bold text-dark">NeoBank</h1>
+    <div id="authScreen" class="fixed inset-0 z-50 bg-white dark:bg-darkBg flex flex-col items-center justify-center transition-colors duration-300">
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-primary rounded-3xl mx-auto flex items-center justify-center text-white text-4xl shadow-lg shadow-indigo-500/50 mb-4">
+                <i class="fa-solid fa-vault"></i>
+            </div>
+            <h1 class="text-3xl font-bold mb-2 dark:text-white" id="pinTitle">Добро пожаловать</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm" id="pinSubtitle">Введите PIN-код для входа</p>
         </div>
-        <nav class="flex-1 p-4 space-y-2">
-            <a href="#" class="flex items-center p-3 text-gray-700 bg-indigo-50 rounded-xl transition hover:bg-indigo-100 font-semibold text-primary">
-                <i class="fa-solid fa-chart-pie w-6"></i> Обзор
-            </a>
-            <a href="#" onclick="alert('Функция в разработке')" class="flex items-center p-3 text-gray-500 hover:bg-gray-50 rounded-xl transition">
-                <i class="fa-solid fa-bullseye w-6"></i> Цели
-            </a>
-            <a href="#" onclick="alert('Функция в разработке')" class="flex items-center p-3 text-gray-500 hover:bg-gray-50 rounded-xl transition">
-                <i class="fa-solid fa-gear w-6"></i> Настройки
-            </a>
-        </nav>
-        <div class="p-4 border-t border-gray-100">
-            <button onclick="resetData()" class="w-full py-2 px-4 text-sm text-red-500 hover:bg-red-50 rounded-lg transition">
-                <i class="fa-solid fa-trash mr-2"></i> Сбросить данные
+
+        <div class="flex gap-4 mb-10" id="pinDots">
+            <div class="w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-700 transition-all duration-200"></div>
+            <div class="w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-700 transition-all duration-200"></div>
+            <div class="w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-700 transition-all duration-200"></div>
+            <div class="w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-700 transition-all duration-200"></div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-6 w-full max-w-xs px-4">
+            <button class="pin-btn" onclick="handlePinInput(1)">1</button>
+            <button class="pin-btn" onclick="handlePinInput(2)">2</button>
+            <button class="pin-btn" onclick="handlePinInput(3)">3</button>
+            <button class="pin-btn" onclick="handlePinInput(4)">4</button>
+            <button class="pin-btn" onclick="handlePinInput(5)">5</button>
+            <button class="pin-btn" onclick="handlePinInput(6)">6</button>
+            <button class="pin-btn" onclick="handlePinInput(7)">7</button>
+            <button class="pin-btn" onclick="handlePinInput(8)">8</button>
+            <button class="pin-btn" onclick="handlePinInput(9)">9</button>
+            <div class="flex justify-center items-center"></div> <button class="pin-btn" onclick="handlePinInput(0)">0</button>
+            <button class="flex justify-center items-center text-gray-400 hover:text-red-500 transition" onclick="handlePinInput('del')">
+                <i class="fa-solid fa-delete-left text-2xl"></i>
             </button>
         </div>
-    </aside>
 
-    <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <header class="h-16 bg-white shadow-sm flex md:hidden items-center justify-between px-4 z-20">
-            <div class="flex items-center">
-                <i class="fa-solid fa-wallet text-xl text-primary mr-2"></i>
-                <span class="font-bold text-lg">NeoBank</span>
+        <p id="forgotPin" class="mt-8 text-xs text-gray-400 cursor-pointer hover:text-primary hidden" onclick="resetApp()">Забыли код? (Сброс данных)</p>
+    </div>
+
+    <style>
+        .pin-btn {
+            width: 64px; height: 64px; border-radius: 50%;
+            font-size: 24px; font-weight: 600;
+            background: rgba(0,0,0,0.03); color: inherit;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto; transition: all 0.2s;
+        }
+        .dark .pin-btn { background: rgba(255,255,255,0.05); }
+        .pin-btn:active { background: #6366f1; color: white; transform: scale(0.9); }
+    </style>
+
+
+    <div id="appScreen" class="flex h-full hidden-force opacity-0 transition-opacity duration-500">
+        
+        <aside class="w-72 bg-white dark:bg-darkCard border-r border-gray-200 dark:border-gray-700 hidden md:flex flex-col z-20 shadow-xl">
+            <div class="h-24 flex items-center px-8 border-b border-gray-100 dark:border-gray-700">
+                <i class="fa-solid fa-wallet text-3xl text-primary mr-3"></i>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">NeoBank</h1>
+                    <p class="text-xs text-gray-400">Ultimate Edition</p>
+                </div>
             </div>
-            <button class="text-gray-500"><i class="fa-solid fa-bars text-xl"></i></button>
-        </header>
+            
+            <nav class="flex-1 p-6 space-y-2">
+                <a href="#" class="flex items-center p-4 bg-indigo-50 dark:bg-indigo-900/30 text-primary rounded-2xl font-semibold transition-all">
+                    <i class="fa-solid fa-chart-pie w-8 text-lg"></i> Обзор
+                </a>
+                <a href="#" onclick="alert('Раздел в разработке')" class="flex items-center p-4 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-2xl transition-all">
+                    <i class="fa-solid fa-piggy-bank w-8 text-lg"></i> Накопления
+                </a>
+            </nav>
 
-        <div class="flex-1 overflow-y-auto p-4 md:p-8">
-            <div class="max-w-7xl mx-auto space-y-8">
-                
-                <div class="flex justify-between items-end">
-                    <div>
-                        <p class="text-gray-500 text-sm" id="currentDate">Сегодня</p>
-                        <h2 class="text-3xl font-bold text-dark">Мои Финансы</h2>
+            <div class="p-6 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                <button onclick="toggleTheme()" class="w-full py-3 px-4 flex items-center justify-between bg-gray-100 dark:bg-slate-700 rounded-xl text-sm font-medium transition">
+                    <span id="themeText">Темная тема</span>
+                    <i id="themeIcon" class="fa-solid fa-moon"></i>
+                </button>
+                <button onclick="lockScreen()" class="w-full py-3 px-4 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl text-sm font-bold transition">
+                    <i class="fa-solid fa-lock mr-2"></i> Заблокировать
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col h-screen relative overflow-hidden bg-gray-100 dark:bg-darkBg">
+            
+            <header class="h-16 bg-white dark:bg-darkCard shadow-sm flex md:hidden items-center justify-between px-4 z-20">
+                <div class="flex items-center">
+                    <i class="fa-solid fa-wallet text-xl text-primary mr-2"></i>
+                    <span class="font-bold text-lg dark:text-white">NeoBank</span>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="toggleTheme()" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                        <i class="fa-solid fa-moon dark:text-yellow-400 text-gray-600"></i>
+                    </button>
+                    <button onclick="lockScreen()" class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-500">
+                        <i class="fa-solid fa-lock text-sm"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 scroll-smooth">
+                <div class="max-w-6xl mx-auto space-y-8">
+                    
+                    <div class="flex flex-col md:flex-row justify-between md:items-end gap-4 fade-in" style="animation-delay: 0.1s;">
+                        <div>
+                            <p class="text-gray-500 dark:text-gray-400 text-sm font-medium" id="greetingTime">Доброе утро,</p>
+                            <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight">Финансовый обзор</h2>
+                        </div>
+                        <button onclick="openModal('transactionModal')" class="bg-primary hover:bg-indigo-600 text-white px-8 py-4 rounded-2xl shadow-lg shadow-indigo-500/30 transition transform hover:-translate-y-1 active:scale-95 flex items-center justify-center font-bold text-lg">
+                            <i class="fa-solid fa-plus mr-3"></i> Добавить
+                        </button>
                     </div>
-                    <button onclick="toggleModal('transactionModal')" class="bg-primary hover:bg-indigo-700 text-white px-6 py-3 rounded-xl shadow-lg shadow-indigo-200 transition transform hover:-translate-y-1 flex items-center">
-                        <i class="fa-solid fa-plus mr-2"></i> Операция
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in" style="animation-delay: 0.2s;">
+                        <div class="md:col-span-2 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden group">
+                            <div class="absolute right-0 top-0 opacity-20 transform translate-x-8 -translate-y-8 group-hover:scale-110 transition duration-700">
+                                <i class="fa-brands fa-cc-visa text-9xl"></i>
+                            </div>
+                            <div class="relative z-10">
+                                <p class="text-indigo-200 text-sm font-medium mb-1">Доступный остаток</p>
+                                <h3 class="text-5xl font-bold mb-8 tracking-tight" id="mainBalance">0 ₽</h3>
+                                <div class="flex gap-8">
+                                    <div>
+                                        <div class="flex items-center text-indigo-200 text-xs uppercase font-bold mb-1">
+                                            <div class="w-2 h-2 rounded-full bg-green-400 mr-2"></div> Доходы
+                                        </div>
+                                        <p class="text-xl font-semibold" id="incomeDisplay">0 ₽</p>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center text-indigo-200 text-xs uppercase font-bold mb-1">
+                                            <div class="w-2 h-2 rounded-full bg-red-400 mr-2"></div> Расходы
+                                        </div>
+                                        <p class="text-xl font-semibold" id="expenseDisplay">0 ₽</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-darkCard rounded-3xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 flex flex-col relative overflow-hidden">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <p class="text-gray-500 dark:text-gray-400 text-xs uppercase font-bold tracking-wider">Долги</p>
+                                    <h3 class="text-2xl font-bold mt-1 text-gray-800 dark:text-white" id="debtDisplay">0 ₽</h3>
+                                </div>
+                                <button onclick="openModal('debtModal')" class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-500 flex items-center justify-center hover:bg-red-100 transition">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+                            <div class="flex-1 overflow-y-auto pr-1 custom-scroll" id="debtsList">
+                                </div>
+                            <div class="h-4 bg-gradient-to-t from-white dark:from-darkCard to-transparent absolute bottom-0 left-0 w-full pointer-events-none"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 fade-in" style="animation-delay: 0.3s;">
+                        
+                        <div class="bg-white dark:bg-darkCard rounded-3xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 flex flex-col items-center">
+                            <h3 class="text-lg font-bold mb-4 w-full text-left dark:text-white">Структура</h3>
+                            <div class="relative w-full h-64">
+                                <canvas id="financeChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="lg:col-span-2 bg-white dark:bg-darkCard rounded-3xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-lg font-bold dark:text-white">Последние операции</h3>
+                                <button onclick="resetData()" class="text-xs text-red-400 hover:text-red-600 font-medium">Очистить историю</button>
+                            </div>
+                            <div id="transactionsContainer" class="space-y-3">
+                                </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="transactionModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity opacity-0 modal-backdrop" onclick="closeModal('transactionModal')"></div>
+        
+        <div class="relative bg-white dark:bg-darkCard w-full max-w-md mx-4 rounded-3xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 modal-content overflow-hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold dark:text-white">Новая запись</h3>
+                    <button onclick="closeModal('transactionModal')" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition">
+                        <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-                        <div class="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
-                            <i class="fa-solid fa-wallet text-9xl"></i>
-                        </div>
-                        <p class="text-indigo-100 text-sm font-medium mb-1">Текущий баланс</p>
-                        <h3 class="text-4xl font-bold mb-4" id="totalBalance">0 ₽</h3>
-                        <div class="flex space-x-2 text-xs bg-white/20 w-fit px-2 py-1 rounded-lg backdrop-blur-sm">
-                            <span><i class="fa-solid fa-arrow-trend-up"></i> Активный</span>
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-center gap-4">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                                    <i class="fa-solid fa-arrow-down"></i>
-                                </div>
-                                <div>
-                                    <p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Доходы</p>
-                                    <p class="text-xl font-bold text-gray-800" id="incomeDisplay">0 ₽</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="h-px bg-gray-100 w-full"></div>
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
-                                    <i class="fa-solid fa-arrow-up"></i>
-                                </div>
-                                <div>
-                                    <p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Расходы</p>
-                                    <p class="text-xl font-bold text-gray-800" id="expenseDisplay">0 ₽</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Мои Долги</p>
-                                <h3 class="text-2xl font-bold text-gray-800 mt-1" id="debtDisplay">0 ₽</h3>
-                            </div>
-                            <button onclick="toggleModal('debtModal')" class="text-primary text-sm hover:underline">
-                                + Добавить
-                            </button>
-                        </div>
-                        <ul id="debtsPreviewList" class="space-y-3 text-sm text-gray-600 overflow-y-auto max-h-24">
-                            <li class="text-center text-gray-400 italic text-xs mt-4">Долгов нет, вы свободны!</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
-                    <div class="lg:col-span-2 space-y-4">
-                        <h3 class="text-xl font-bold text-gray-800">История операций</h3>
-                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div id="transactionList" class="divide-y divide-gray-100">
-                                <div class="p-8 text-center text-gray-400">
-                                    <i class="fa-solid fa-receipt text-4xl mb-3 opacity-30"></i>
-                                    <p>Операций пока нет</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <h3 class="text-xl font-bold text-gray-800">Структура расходов</h3>
-                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center" style="min-height: 350px;">
-                            <canvas id="expenseChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </main>
-
-    <div id="transactionModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
-        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50" onclick="toggleModal('transactionModal')"></div>
-        
-        <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded-2xl shadow-2xl z-50 overflow-y-auto transform scale-95 transition-transform duration-300">
-            <div class="modal-content py-4 text-left px-6">
-                <div class="flex justify-between items-center pb-3">
-                    <p class="text-2xl font-bold text-gray-800">Новая запись</p>
-                    <div class="modal-close cursor-pointer z-50" onclick="toggleModal('transactionModal')">
-                        <i class="fa-solid fa-xmark text-2xl text-gray-500"></i>
-                    </div>
-                </div>
-
-                <form id="transactionForm" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4 p-1 bg-gray-100 rounded-xl">
-                        <label class="cursor-pointer text-center">
-                            <input type="radio" name="type" value="income" class="peer sr-only">
-                            <div class="py-2 rounded-lg text-gray-500 peer-checked:bg-white peer-checked:text-green-600 peer-checked:shadow-sm transition font-medium">
-                                Доход
-                            </div>
-                        </label>
-                        <label class="cursor-pointer text-center">
-                            <input type="radio" name="type" value="expense" class="peer sr-only" checked>
-                            <div class="py-2 rounded-lg text-gray-500 peer-checked:bg-white peer-checked:text-red-600 peer-checked:shadow-sm transition font-medium">
-                                Расход
-                            </div>
-                        </label>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">Название / Описание</label>
-                        <input type="text" id="t-title" placeholder="Например: Продукты" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary focus:bg-white focus:outline-none transition" required>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">Сумма (₽)</label>
-                        <input type="number" id="t-amount" placeholder="0" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary focus:bg-white focus:outline-none transition" required>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">Категория</label>
-                        <div class="grid grid-cols-5 gap-2" id="categoryGrid">
-                            </div>
-                        <input type="hidden" id="t-icon" value="fa-bag-shopping">
-                        <input type="hidden" id="t-color" value="bg-blue-100 text-blue-600">
-                    </div>
-
-                    <div class="pt-4">
-                        <button type="submit" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-xl shadow hover:bg-indigo-700 transition">
-                            Сохранить
+                <form id="transForm" class="space-y-5">
+                    <div class="grid grid-cols-2 p-1.5 bg-gray-100 dark:bg-slate-700 rounded-2xl">
+                        <button type="button" onclick="setTransType('expense')" id="btn-expense" class="py-3 rounded-xl text-sm font-bold transition shadow-sm bg-white text-red-500 dark:bg-darkCard">
+                            Расход
+                        </button>
+                        <button type="button" onclick="setTransType('income')" id="btn-income" class="py-3 rounded-xl text-sm font-bold transition text-gray-500 dark:text-gray-400">
+                            Доход
                         </button>
                     </div>
+
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₽</span>
+                        <input type="number" id="t-amount" placeholder="0" class="w-full pl-8 pr-4 py-4 text-2xl font-bold bg-gray-50 dark:bg-slate-800 border-2 border-transparent focus:border-primary rounded-2xl outline-none transition dark:text-white placeholder-gray-300" required>
+                    </div>
+
+                    <input type="text" id="t-title" placeholder="Комментарий (необязательно)" class="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border-2 border-transparent focus:border-primary rounded-2xl outline-none transition dark:text-white text-sm">
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Категория</label>
+                        <div class="grid grid-cols-5 gap-3" id="categoryGrid">
+                            </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-primary hover:bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/30 transition transform active:scale-95">
+                        Сохранить
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <div id="debtModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
-        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50" onclick="toggleModal('debtModal')"></div>
-        <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded-2xl shadow-2xl z-50 overflow-y-auto">
-            <div class="modal-content py-4 text-left px-6">
-                <div class="flex justify-between items-center pb-3">
-                    <p class="text-2xl font-bold text-gray-800">Добавить долг</p>
-                    <div class="cursor-pointer z-50" onclick="toggleModal('debtModal')">
-                        <i class="fa-solid fa-xmark text-2xl text-gray-500"></i>
-                    </div>
+    <div id="debtModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity opacity-0 modal-backdrop" onclick="closeModal('debtModal')"></div>
+        <div class="relative bg-white dark:bg-darkCard w-full max-w-sm mx-4 rounded-3xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 modal-content">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold dark:text-white">Добавить долг</h3>
+                    <button onclick="closeModal('debtModal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
                 </div>
                 <form id="debtForm" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">Кому/Кто (Описание)</label>
-                        <input type="text" id="d-title" placeholder="Ипотека или Друг Иван" class="w-full px-4 py-3 rounded-xl bg-gray-50 border-gray-200 focus:border-primary focus:outline-none" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">Сумма долга (₽)</label>
-                        <input type="number" id="d-amount" placeholder="0" class="w-full px-4 py-3 rounded-xl bg-gray-50 border-gray-200 focus:border-primary focus:outline-none" required>
-                    </div>
-                    <div class="pt-2">
-                        <button type="submit" class="w-full bg-red-500 text-white font-bold py-3 px-4 rounded-xl shadow hover:bg-red-600 transition">
-                            Добавить в долги
-                        </button>
-                    </div>
+                    <input type="text" id="d-title" placeholder="Кому/Кто (Имя)" class="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-red-500 dark:text-white" required>
+                    <input type="number" id="d-amount" placeholder="Сумма" class="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-red-500 dark:text-white" required>
+                    <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-red-500/30 transition">Добавить</button>
                 </form>
             </div>
         </div>
     </div>
 
     <script>
+        // --- КОНФИГУРАЦИЯ ---
+        const CONFIG = {
+            categories: [
+                { id: 'food', icon: 'fa-utensils', color: 'bg-orange-100 text-orange-600', name: 'Еда' },
+                { id: 'shop', icon: 'fa-bag-shopping', color: 'bg-blue-100 text-blue-600', name: 'Шопинг' },
+                { id: 'transport', icon: 'fa-car', color: 'bg-zinc-100 text-zinc-600', name: 'Авто' },
+                { id: 'home', icon: 'fa-house', color: 'bg-purple-100 text-purple-600', name: 'Дом' },
+                { id: 'health', icon: 'fa-heart-pulse', color: 'bg-red-100 text-red-600', name: 'Здоровье' },
+                { id: 'fun', icon: 'fa-gamepad', color: 'bg-indigo-100 text-indigo-600', name: 'Досуг' },
+                { id: 'work', icon: 'fa-briefcase', color: 'bg-green-100 text-green-600', name: 'Работа' },
+                { id: 'other', icon: 'fa-asterisk', color: 'bg-gray-100 text-gray-600', name: 'Другое' }
+            ]
+        };
+
         // --- СОСТОЯНИЕ (STATE) ---
-        let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-        let debts = JSON.parse(localStorage.getItem('debts')) || [];
+        let state = {
+            pin: localStorage.getItem('neoPin'),
+            transactions: JSON.parse(localStorage.getItem('neoTransactions')) || [],
+            debts: JSON.parse(localStorage.getItem('neoDebts')) || [],
+            theme: localStorage.getItem('neoTheme') || 'light',
+            tempPin: '',
+            isSetupMode: !localStorage.getItem('neoPin'),
+            currentType: 'expense',
+            selectedCatIdx: 0
+        };
+
         let chartInstance = null;
 
-        // --- КАТЕГОРИИ И ИКОНКИ ---
-        const categories = [
-            { icon: 'fa-bag-shopping', color: 'bg-blue-100 text-blue-600', name: 'Покупки' },
-            { icon: 'fa-utensils', color: 'bg-orange-100 text-orange-600', name: 'Еда' },
-            { icon: 'fa-car', color: 'bg-zinc-100 text-zinc-600', name: 'Транспорт' },
-            { icon: 'fa-house', color: 'bg-purple-100 text-purple-600', name: 'Жилье' },
-            { icon: 'fa-heart-pulse', color: 'bg-red-100 text-red-600', name: 'Здоровье' },
-            { icon: 'fa-gamepad', color: 'bg-indigo-100 text-indigo-600', name: 'Развлечения' },
-            { icon: 'fa-graduation-cap', color: 'bg-yellow-100 text-yellow-600', name: 'Обучение' },
-            { icon: 'fa-briefcase', color: 'bg-green-100 text-green-600', name: 'Зарплата' },
-            { icon: 'fa-money-bill-transfer', color: 'bg-teal-100 text-teal-600', name: 'Перевод' },
-            { icon: 'fa-asterisk', color: 'bg-gray-100 text-gray-600', name: 'Другое' },
-        ];
-
         // --- ИНИЦИАЛИЗАЦИЯ ---
-        document.addEventListener('DOMContentLoaded', () => {
-            renderDate();
-            renderCategories();
-            updateUI();
+         document.addEventListener('DOMContentLoaded', () => {
+            applyTheme();
+            setupPinScreen();
+            renderGreeting();
+            
+            // Если пин-кода нет, сразу настраиваем UI для создания
+            if(state.isSetupMode) {
+                document.getElementById('pinTitle').innerText = "Создайте код доступа";
+                document.getElementById('pinSubtitle').innerText = "Придумайте 4 цифры для входа";
+            } else {
+                // Показать кнопку "Забыли"
+                document.getElementById('forgotPin').classList.remove('hidden');
+            }
         });
 
-        // --- ОСНОВНЫЕ ФУНКЦИИ ОБНОВЛЕНИЯ ИНТЕРФЕЙСА ---
-        function updateUI() {
-            // 1. Подсчет сумм
-            const amounts = transactions.map(t => t.type === 'income' ? t.amount : -t.amount);
-            const total = amounts.reduce((acc, item) => acc + item, 0);
+        // --- ЛОГИКА PIN-КОДА ---
+        function handlePinInput(val) {
+            const dots = document.getElementById('pinDots').children;
             
-            const income = transactions
-                .filter(t => t.type === 'income')
-                .reduce((acc, t) => acc + t.amount, 0);
+            if (val === 'del') {
+                state.tempPin = state.tempPin.slice(0, -1);
+            } else {
+                if (state.tempPin.length < 4) {
+                    state.tempPin += val;
+                }
+            }
 
-            const expense = transactions
-                .filter(t => t.type === 'expense')
-                .reduce((acc, t) => acc + t.amount, 0);
+            // Обновление UI точек
+            for (let i = 0; i < 4; i++) {
+                if (i < state.tempPin.length) {
+                    dots[i].className = "w-4 h-4 rounded-full bg-primary transition-all duration-200 transform scale-110";
+                } else {
+                    dots[i].className = "w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-700 transition-all duration-200";
+                }
+            }
 
-            const totalDebt = debts.reduce((acc, d) => acc + d.amount, 0);
+            // Проверка
+            if (state.tempPin.length === 4) {
+                setTimeout(() => validatePin(), 100);
+            }
+        }
 
-            // 2. Обновление текста в DOM
-            document.getElementById('totalBalance').innerText = formatMoney(total);
+        function validatePin() {
+            if (state.isSetupMode) {
+                // Сохраняем новый пин
+                localStorage.setItem('neoPin', state.tempPin);
+                state.pin = state.tempPin;
+                state.isSetupMode = false;
+                unlockApp();
+            } else {
+                // Проверяем существующий
+                if (state.tempPin === state.pin) {
+                    unlockApp();
+                } else {
+                    // Ошибка
+                    const container = document.getElementById('authScreen');
+                    container.classList.add('shake');
+                    state.tempPin = '';
+                    handlePinInput('del'); // Сброс точек
+                    handlePinInput('del');
+                    handlePinInput('del');
+                    handlePinInput('del');
+                    
+                    setTimeout(() => container.classList.remove('shake'), 500);
+                }
+            }
+        }
+
+        function unlockApp() {
+            const auth = document.getElementById('authScreen');
+            const app = document.getElementById('appScreen');
+            
+            auth.classList.add('opacity-0');
+            setTimeout(() => {
+                auth.classList.add('hidden-force');
+                app.classList.remove('hidden-force');
+                // Небольшая задержка для анимации появления
+                setTimeout(() => app.classList.remove('opacity-0'), 50);
+                
+                initAppContent();
+            }, 300);
+        }
+
+        function lockScreen() {
+            location.reload(); // Простой способ вернуть на экран блокировки
+        }
+
+        function resetApp() {
+            if(confirm('Это удалит ПИН-КОД и все данные. Продолжить?')) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        function setupPinScreen() {
+            // Placeholder logic already covered
+        }
+
+        // --- ОСНОВНАЯ ЛОГИКА ПРИЛОЖЕНИЯ ---
+        function initAppContent() {
+            renderCategories();
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            // Расчеты
+            let income = 0;
+            let expense = 0;
+            
+            state.transactions.forEach(t => {
+                if(t.type === 'income') income += t.amount;
+                else expense += t.amount;
+            });
+            
+            const total = income - expense;
+            const debtsTotal = state.debts.reduce((acc, d) => acc + d.amount, 0);
+
+            // DOM Обновления
+            animateValue("mainBalance", total);
             document.getElementById('incomeDisplay').innerText = `+ ${formatMoney(income)}`;
             document.getElementById('expenseDisplay').innerText = `- ${formatMoney(expense)}`;
-            document.getElementById('debtDisplay').innerText = formatMoney(totalDebt);
+            document.getElementById('debtDisplay').innerText = formatMoney(debtsTotal);
 
-            // 3. Рендер списков
-            renderTransactionList();
-            renderDebtsList();
+            renderTransactions();
+            renderDebts();
             renderChart(income, expense);
             
-            // 4. Сохранение
-            saveData();
+            // Сохранение
+            localStorage.setItem('neoTransactions', JSON.stringify(state.transactions));
+            localStorage.setItem('neoDebts', JSON.stringify(state.debts));
         }
 
-        function formatMoney(amount) {
-            return amount.toLocaleString('ru-RU') + ' ₽';
+        // Анимация чисел
+        function animateValue(id, end) {
+            const obj = document.getElementById(id);
+            const start = parseFloat(obj.innerText.replace(/[^\d.-]/g, '')) || 0;
+            if(start === end) return;
+            
+            const duration = 1000;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // Ease out quart
+                const ease = 1 - Math.pow(1 - progress, 4);
+                
+                const current = start + (end - start) * ease;
+                obj.innerText = formatMoney(current);
+
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
         }
 
-        function renderDate() {
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('currentDate').innerText = new Date().toLocaleDateString('ru-RU', options);
+        function formatMoney(num) {
+            return new Intl.NumberFormat('ru-RU').format(Math.round(num)) + ' ₽';
         }
 
-        // --- СПИСОК ТРАНЗАКЦИЙ ---
-        function renderTransactionList() {
-            const list = document.getElementById('transactionList');
-            list.innerHTML = '';
+        function renderGreeting() {
+            const hour = new Date().getHours();
+            let text = 'Доброй ночи,';
+            if (hour >= 5 && hour < 12) text = 'Доброе утро,';
+            else if (hour >= 12 && hour < 18) text = 'Добрый день,';
+            else if (hour >= 18 && hour < 23) text = 'Добрый вечер,';
+            document.getElementById('greetingTime').innerText = text;
+        }
 
-            if (transactions.length === 0) {
-                list.innerHTML = `
-                    <div class="p-8 text-center text-gray-400">
-                        <i class="fa-solid fa-receipt text-4xl mb-3 opacity-30"></i>
-                        <p>Операций пока нет. Добавьте первую!</p>
-                    </div>`;
+        // --- ТРАНЗАКЦИИ ---
+        function renderTransactions() {
+            const container = document.getElementById('transactionsContainer');
+            container.innerHTML = '';
+
+            if (state.transactions.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-gray-400">Нет операций</div>`;
                 return;
             }
 
-            // Сортировка: новые сверху
-            const sorted = [...transactions].reverse();
+            // Последние 20
+            const list = [...state.transactions].reverse().slice(0, 20);
 
-            sorted.forEach(t => {
-                const sign = t.type === 'income' ? '+' : '-';
-                const colorClass = t.type === 'income' ? 'text-green-600' : 'text-red-600';
-                
-                const item = document.createElement('div');
-                item.className = 'p-4 flex items-center justify-between hover:bg-gray-50 transition fade-in';
-                item.innerHTML = `
+            list.forEach(t => {
+                const isInc = t.type === 'income';
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl hover:bg-gray-100 dark:hover:bg-slate-800 transition cursor-pointer";
+                div.onclick = () => { if(confirm('Удалить запись?')) { deleteTransaction(t.id) } };
+
+                div.innerHTML = `
                     <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-full ${t.iconColor} flex items-center justify-center text-lg">
-                            <i class="fa-solid ${t.icon}"></i>
+                        <div class="w-10 h-10 rounded-full ${t.catColor} flex items-center justify-center text-sm">
+                            <i class="fa-solid ${t.catIcon}"></i>
                         </div>
                         <div>
-                            <p class="font-bold text-gray-800">${t.title}</p>
+                            <p class="font-bold text-gray-800 dark:text-gray-200 text-sm">${t.title || t.catName}</p>
                             <p class="text-xs text-gray-400">${new Date(t.date).toLocaleDateString()}</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <span class="font-bold ${colorClass}">${sign} ${formatMoney(t.amount)}</span>
-                        <button onclick="deleteTransaction(${t.id})" class="text-gray-300 hover:text-red-500 transition">
-                            <i class="fa-solid fa-trash"></i>
+                    <span class="font-bold ${isInc ? 'text-green-500' : 'text-gray-800 dark:text-white'}">
+                        ${isInc ? '+' : '-'} ${formatMoney(t.amount)}
+                    </span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // --- ДОЛГИ ---
+        function renderDebts() {
+            const list = document.getElementById('debtsList');
+            list.innerHTML = '';
+            
+            if(state.debts.length === 0) {
+                list.innerHTML = `<p class="text-center text-gray-400 text-xs mt-4">Долгов нет</p>`;
+                return;
+            }
+
+            state.debts.forEach(d => {
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700 last:border-0";
+                item.innerHTML = `
+                    <span class="text-sm font-medium dark:text-gray-300 truncate w-1/2">${d.title}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="text-red-500 font-bold text-sm">${formatMoney(d.amount)}</span>
+                        <button onclick="deleteDebt(${d.id})" class="text-gray-300 hover:text-green-500 transition">
+                            <i class="fa-solid fa-check"></i>
                         </button>
                     </div>
                 `;
@@ -365,6 +548,186 @@
             });
         }
 
-        // --- СПИСОК ДОЛГОВ ---
-        function renderDebtsList() {
-     
+        // --- ГРАФИК ---
+        function renderChart(income, expense) {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#cbd5e1' : '#4b5563';
+
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Доходы', 'Расходы'],
+                    datasets: [{
+                        data: (income === 0 && expense === 0) ? [1, 0] : [income, expense],
+                        backgroundColor: (income === 0 && expense === 0) 
+                            ? [isDark ? '#334155' : '#e5e7eb', 'transparent'] 
+                            : ['#4ade80', '#6366f1'],
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: {
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { color: textColor, font: { family: 'Manrope' }, usePointStyle: true, padding: 20 } 
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- ФУНКЦИИ МОДАЛОК ---
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('hidden');
+            // Timeout для анимации
+            setTimeout(() => {
+                modal.querySelector('.modal-backdrop').classList.remove('opacity-0');
+                modal.querySelector('.modal-content').classList.remove('scale-95', 'opacity-0');
+                modal.querySelector('.modal-content').classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            modal.querySelector('.modal-backdrop').classList.add('opacity-0');
+            modal.querySelector('.modal-content').classList.remove('scale-100', 'opacity-100');
+            modal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // --- ТЕМА (DARK MODE) ---
+        function toggleTheme() {
+            state.theme = state.theme === 'light' ? 'dark' : 'light';
+            localStorage.setItem('neoTheme', state.theme);
+            applyTheme();
+        }
+
+        function applyTheme() {
+            const html = document.documentElement;
+            const text = document.getElementById('themeText');
+            const icon = document.getElementById('themeIcon');
+            
+            if (state.theme === 'dark') {
+                html.classList.add('dark');
+                if(text) text.innerText = 'Светлая тема';
+                if(icon) icon.className = 'fa-solid fa-sun text-yellow-400';
+            } else {
+                html.classList.remove('dark');
+                if(text) text.innerText = 'Темная тема';
+                if(icon) icon.className = 'fa-solid fa-moon';
+            }
+            updateDashboard(); // Перерисовать график
+        }
+
+        // --- ДОБАВЛЕНИЕ ЗАПИСЕЙ ---
+        function setTransType(type) {
+            state.currentType = type;
+            const btnExp = document.getElementById('btn-expense');
+            const btnInc = document.getElementById('btn-income');
+            
+            if(type === 'expense') {
+                btnExp.className = "py-3 rounded-xl text-sm font-bold transition shadow-sm bg-white text-red-500 dark:bg-darkCard";
+                btnInc.className = "py-3 rounded-xl text-sm font-bold transition text-gray-500 dark:text-gray-400";
+            } else {
+                btnInc.className = "py-3 rounded-xl text-sm font-bold transition shadow-sm bg-white text-green-500 dark:bg-darkCard";
+                btnExp.className = "py-3 rounded-xl text-sm font-bold transition text-gray-500 dark:text-gray-400";
+            }
+        }
+
+        function renderCategories() {
+            const grid = document.getElementById('categoryGrid');
+            grid.innerHTML = '';
+            
+            CONFIG.categories.forEach((cat, idx) => {
+                const div = document.createElement('div');
+                div.className = `flex flex-col items-center gap-1 cursor-pointer p-2 rounded-xl transition ${idx === 0 ? 'bg-indigo-50 dark:bg-indigo-900/30 ring-2 ring-primary ring-inset' : 'hover:bg-gray-50 dark:hover:bg-slate-700'}`;
+                div.dataset.idx = idx;
+                div.onclick = () => selectCat(div, idx);
+                div.innerHTML = `
+                    <div class="w-8 h-8 rounded-full ${cat.color} flex items-center justify-center text-xs pointer-events-none">
+                        <i class="fa-solid ${cat.icon}"></i>
+                    </div>
+                    <span class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase pointer-events-none">${cat.name}</span>
+                `;
+                grid.appendChild(div);
+            });
+            state.selectedCatIdx = 0;
+        }
+
+        function selectCat(el, idx) {
+            const all = document.getElementById('categoryGrid').children;
+            for(let child of all) {
+                child.className = "flex flex-col items-center gap-1 cursor-pointer p-2 rounded-xl transition hover:bg-gray-50 dark:hover:bg-slate-700";
+            }
+            el.className = "flex flex-col items-center gap-1 cursor-pointer p-2 rounded-xl transition bg-indigo-50 dark:bg-indigo-900/30 ring-2 ring-primary ring-inset";
+            state.selectedCatIdx = idx;
+        }
+
+        document.getElementById('transForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('t-amount').value);
+            const title = document.getElementById('t-title').value;
+            const cat = CONFIG.categories[state.selectedCatIdx];
+
+            if(isNaN(amount) || amount <= 0) return;
+
+            state.transactions.push({
+                id: Date.now(),
+                amount,
+                title,
+                type: state.currentType,
+                catName: cat.name,
+                catIcon: cat.icon,
+                catColor: cat.color,
+                date: new Date().toISOString()
+            });
+
+            updateDashboard();
+            e.target.reset();
+            closeModal('transactionModal');
+        });
+
+        document.getElementById('debtForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('d-title').value;
+            const amount = parseFloat(document.getElementById('d-amount').value);
+            
+            if(title && amount) {
+                state.debts.push({ id: Date.now(), title, amount });
+                updateDashboard();
+                e.target.reset();
+                closeModal('debtModal');
+            }
+        });
+
+        // --- УДАЛЕНИЕ ---
+        function deleteTransaction(id) {
+            state.transactions = state.transactions.filter(t => t.id !== id);
+            updateDashboard();
+        }
+
+        function deleteDebt(id) {
+            state.debts = state.debts.filter(d => d.id !== id);
+            updateDashboard();
+        }
+        
+        function resetData() {
+            if(confirm('Очистить всю историю?')) {
+                state.transactions = [];
+                updateDashboard();
+            }
+        }
+
+    </script>
+</body>
+</html>
