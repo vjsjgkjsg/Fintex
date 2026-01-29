@@ -472,10 +472,11 @@
             requestAnimationFrame(update);
         }
 
-        function formatMoney(num) {
-            return new Intl.NumberFormat('ru-RU').format(Math.round(num)) + ' ₽';
-        }
-
+           function formatMoney(num) {
+    // Используем локаль 'kk-KZ' для правильного разделения тысяч
+    return new Intl.NumberFormat('kk-KZ').format(Math.round(num)) + ' ₸';
+           }
+        
         function renderGreeting() {
             const hour = new Date().getHours();
             let text = 'Доброй ночи,';
