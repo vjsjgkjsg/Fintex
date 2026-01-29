@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💳 Финансовый Контроль — TEST BUILD</title>
+
+<meta name="theme-color" content="#020617">
+
+<style>
+/* =========================
+   BASE / RESET
+========================= */
+* { box-sizing: border-box; }
+html,body {
+  margin:0; padding:0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background:#020617;
+  color:#e5e7eb;
+}
+button,input,select {
+  background:#0f172a;
+  color:#e5e7eb;
+  border:none;
+  border-radius:14px;
+  padding:12px;
+}
+button { background:#2563eb; font-weight:600; }
+.hidden { display:none; }
+
+/* =========================
+   HEADER / BALANCE
+========================= */
+header {
+  position:sticky; top:0;
+  background:#020617;
+  padding:14px;
+  z-index:10;
+}
+#balance {
+  font-size:18px;
+  margin-top:6px;
+}
+
+/* =========================
+   CATEGORY SLIDER
+========================= */
+#categories {
+  display:flex;
+  gap:12px;
+  overflow-x:auto;
+  padding:12px;
+}
+.cat {
+  min-width:180px;
+  padding:14px;
+  border-radius:22px;
+  background:#0f172a;
+  flex-shrink:0;
+}
+.cat small { opacity:.6 }
+
+/* =========================
+   MODALS
+========================= */
+.modal {
+  position:fixed;
+  inset:0;
+  background:#020617;
+  z-index:100;
+  display:none;
+  flex-direction:column;
+}
+.modal.show { display:flex; }
+.modal .top {
+  display:flex;
+  justify-content:space-between;
+  padding:14px;
+  border-bottom:1px solid #1e293b;
+}
+.modal .content {
+  padding:14px;
+  overflow-y:auto;
+}
+
+/* =========================
+   RECORDS
+========================= */
+ul { list-style:none; padding:0; margin:0; }
+li {
+  display:flex;
+  justify-content:space-between;
+  padding:10px 0;
+  border-bottom:1px solid #1e293b;
+}
+
+/* =========================
+   THEME SWITCH
+========================= */
+.light {
+  background:#f8fafc;
+  color:#020617;
+}
+.light header { background:#f8fafc; }
+.light .cat,
+.light button,
+.light input,
+.light select {
+  background:#e5e7eb;
+  color:#020617;
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= PIN ================= -->
+<div class="modal show" id="pinModal">
+  <div class="top"><b>Введите PIN</b></div>
+  <div class="content">
+    <input id="pinInput" type="password" placeholder="PIN">
+    <button onclick="Auth.login()">Войти</button>
+  </div>
+</div>
+
+<!-- ================= HEADER ================= -->
+<header>
+  <h2>💳 Финансовый Контроль</h2>
+  <div id="balance">Баланс: 0 ₸</div>
+  <button onclick="UI.toggleTheme()">Сменить тему</button>
+</header>
+
+<!-- ================= CATEGORIES ================= -->
+<div id="categories"></div>
+
+<!-- ================= RECORD MODAL ================= -->
+<div class="modal" id="recordModal">
+  <div class="top">
+    <b id="modalTitle"></b>
+    <span onclick="UI.close()">✕</span>
+  </div>
+  <div class="content">
+
+    <select id="monthSelect"></select>
+
+    <input id="amount" type="number" placeholder="Сумма">
+    <input id="comment" placeholder="Комментарий">
+
+    <div style="display:flex;gap:8px">
+      <button onclick="Records.quick(1000)">+1000</button>
+      <button onclick="Records.quick(5000)">+5000</button>
+    </div>
+
+    <button onclick="Records.add()">Добавить</button>
+
+    <input placeholder="Поиск" oninput="Filters.search(this.value)">
+    <select onchange="Filters.sort(this.value)">
+      <option value="new">Сначала новые</option>
+      <option value="old">Сначала старые</option>
+    </select>
+
+    <ul id="records"></ul>
+
+    <button onclick="Export.backup()">Экспорт JSON</button>
+  </div>
+</div>
+
+<script>
+/* =================================================
+   STORAGE
+================================================= */
+const Storage = {
+  data: JSON.parse(localStorage.getItem("finance_test")) || {
+    pin:"1234",
+    theme:"dark",
+    categories:[
+      {id:1,name:"Доход",type:"income",color:"#22c55e"},
+      {id:2,name:"Расход",type:"spent",color:"#ef4444"},
+      {id:3,name:"Долг",type:"debt",color:"#eab308"}
+    ],
+    records:[]
+  },
+  save(){
+    localStorage.setItem("finance_test",JSON.stringify(this.data));
+  }
+};
+
+/* =================================================
+   AUTH
+================================================= */
+const Auth = {
+  login(){
+    if(pinInput.value===Storage.data.pin){
+      pinModal.classList.remove("show");
+    } else alert("Неверный PIN");
+  }
+};
+
+/* =================================================
+   UI
+================================================= */
+const UI = {
+  currentCat:null,
+  open(cat){
+    this.currentCat=cat;
+    modalTitle.innerText=cat.name;
+    recordModal.classList.add("show");
+    Records.render();
+  },
+  close(){
+    recordModal.classList.remove("show");
+  },
+  toggleTheme(){
+    document.body.classList.toggle("light");
+  }
+};
+
+/* =================================================
+   CATEGORIES
+================================================= */
+function renderCategories(){
+  categories.innerHTML="";
+  Storage.data.categories.forEach(c=>{
+    const el=document.createElement("div");
+    el.className="cat";
+    el.style.background=c.color;
+    el.innerHTML=`<b>${c.name}</b><small>${c.type}</small>`;
+    el.onclick=()=>UI.open(c);
+    categories.appendChild(el);
+  });
+}
+
+/* =================================================
+   RECORDS
+================================================= */
+const Records={
+  add(){
+    if(!amount.value) return;
+    Storage.data.records.push({
+      id:Date.now(),
+      cat:UI.currentCat.id,
+      sum:+amount.value,
+      text:comment.value,
+      date:new Date().toISOString()
+    });
+    amount.value=""; comment.value="";
+    Storage.save();
+    this.render();
+    Balance.update();
+  },
+  quick(v){
+    amount.value=(+amount.value||0)+v;
+  },
+  render(){
+    records.innerHTML="";
+    let list=Storage.data.records.filter(r=>r.cat===UI.currentCat.id);
+    list.forEach(r=>{
+      const li=document.createElement("li");
+      li.innerHTML=`<span>${r.sum} ₸ — ${r.text}</span>
+      <span onclick="Records.del(${r.id})">🗑</span>`;
+      records.appendChild(li);
+    });
+  },
+  del(id){
+    if(!confirm("Удалить?")) return;
+    Storage.data.records=Storage.data.records.filter(r=>r.id!==id);
+    Storage.save();
+    this.render();
+    Balance.update();
+  }
+};
+
+/* =================================================
+   FILTERS
+================================================= */
+const Filters={
+  sort(type){
+    Storage.data.records.sort((a,b)=>type==="new"?b.id-a.id:a.id-b.id);
+    Records.render();
+  },
+  search(t){
+    records.querySelectorAll("li").forEach(li=>{
+      li.style.display=li.innerText.includes(t)?"":"none";
+    });
+  }
+};
+
+/* =================================================
+   BALANCE
+================================================= */
+const Balance={
+  update(){
+    let inc=0,sp=0,debt=0;
+    Storage.data.records.forEach(r=>{
+      const t=Storage.data.categories.find(c=>c.id===r.cat).type;
+      if(t==="income") inc+=r.sum;
+      if(t==="spent") sp+=r.sum;
+      if(t==="debt") debt+=r.sum;
+    });
+    balance.innerText=`Баланс: ${inc-sp-debt} ₸`;
+  }
+};
+
+/* =================================================
+   EXPORT
+================================================= */
+const Export={
+  backup(){
+    const blob=new Blob([JSON.stringify(Storage.data)],{type:"application/json"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="finance-backup.json";
+    a.click();
+  }
+};
+
+/* =================================================
+   INIT
+================================================= */
+renderCategories();
+Balance.update();
+</script>
+
+</body>
+  </html>
