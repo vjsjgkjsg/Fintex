@@ -1,6 +1,6 @@
 /* ===== MAIN.CSS ===== */
 
-/* Сброс */
+/* RESET */
 * {
   box-sizing: border-box;
 }
@@ -11,14 +11,15 @@ html, body {
   background: var(--bg-main);
   color: var(--text-main);
   scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; /* momentum scroll для iOS */
 }
 
 /* HEADER */
 header {
   position: sticky;
   top: 0;
-  background: var(--bg-main);
   padding: 16px;
+  background: var(--bg-main);
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -38,10 +39,6 @@ header button {
   background: var(--primary);
   color: #fff;
   font-weight: 600;
-  transition: 0.3s;
-}
-header button:hover {
-  opacity: 0.9;
 }
 
 /* CATEGORY SLIDER */
@@ -51,38 +48,52 @@ header button:hover {
   overflow-x: auto;
   padding: 16px;
   scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch; /* momentum scroll */
 }
-#categories::-webkit-scrollbar {
-  display: none;
-}
+#categories::-webkit-scrollbar { display: none; }
 
 /* CARD STYLING */
 .cat {
   min-width: 240px;
   max-width: 280px;
-  height: 120px;
+  height: 140px;
   border-radius: var(--radius);
-  padding: 16px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   scroll-snap-align: start;
-  background: var(--bg-card);
+  padding: 16px;
+  background: linear-gradient(135deg, var(--primary), var(--success));
   box-shadow: 0 8px 20px rgba(0,0,0,0.4);
   cursor: pointer;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
+
+/* CARD ICON */
+.cat::before {
+  content: "💰"; /* можно потом динамически менять под категорию */
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 28px;
+  opacity: 0.2;
+}
+
+/* HOVER EFFECT */
 .cat:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 28px rgba(0,0,0,0.5);
 }
+
 .cat b {
   font-size: 20px;
   font-weight: 700;
 }
 .cat small {
-  opacity: 0.7;
+  opacity: 0.8;
   font-size: 14px;
 }
 
@@ -94,8 +105,15 @@ header button:hover {
   display: none;
   flex-direction: column;
   z-index: 200;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.3s ease;
 }
-.modal.show { display: flex; }
+.modal.show {
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
+}
 .modal .top {
   display: flex;
   justify-content: space-between;
@@ -119,6 +137,9 @@ ul#records li {
   justify-content: space-between;
   padding: 12px 0;
   border-bottom: 1px solid var(--bg-accent);
+  opacity: 0;
+  transform: translateX(-10px);
+  animation: fadeIn 0.3s forwards;
 }
 ul#records li span.trash {
   cursor: pointer;
@@ -154,6 +175,15 @@ input:focus, select:focus, button:focus {
   color: #fff;
   font-weight: 600;
 }
-.quick button:hover {
-  opacity: 0.9;
+
+/* RESPONSIVE MOBILE */
+@media (max-width: 480px) {
+  .cat { min-width: 200px; height: 120px; }
+  header h1 { font-size: 20px; }
+  #balance { font-size: 16px; }
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+  to { opacity: 1; transform: translateX(0); }
 }
