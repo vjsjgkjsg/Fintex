@@ -23,7 +23,9 @@ let STATE = {
     credits: JSON.parse(localStorage.getItem('neoCredits')) || [],
     tempPin: '',
     currentCat: 0,
-    chart: null
+    chart: null,
+    attempts: 3,        // Добавлено: счетчик попыток
+    isLocked: false     // Добавлено: статус блокировки
 };
 
 /* === МЕНЕДЖЕР PIN-КОДА === */
@@ -34,6 +36,8 @@ const PinManager = {
         }
     },
     enter(num) {
+        if (STATE.isLocked) return; // Блокировка ввода
+
         if (STATE.tempPin.length < 4) {
             STATE.tempPin += num;
             this.renderDots();
@@ -41,6 +45,7 @@ const PinManager = {
         }
     },
     backspace() {
+        if (STATE.isLocked) return;
         STATE.tempPin = STATE.tempPin.slice(0, -1);
         this.renderDots();
     },
@@ -52,6 +57,9 @@ const PinManager = {
         });
     },
     check() {
+        const statusText = document.getElementById('pin-status');
+        const pinDotsBox = document.querySelector('.pin-dots');
+
         setTimeout(() => {
             if (!STATE.pin) {
                 // Создание нового
@@ -62,15 +70,48 @@ const PinManager = {
             } else {
                 // Проверка
                 if (STATE.tempPin === STATE.pin) {
+                    STATE.attempts = 3; // Сброс попыток при успехе
                     App.unlock();
                 } else {
-                    Toast.show("Неверный код!");
-                    document.querySelector('.pin-dots').classList.add('shake'); // Можно добавить CSS анимацию
-                    STATE.tempPin = '';
-                    this.renderDots();
+                    // ОШИБКА
+                    STATE.attempts--;
+                    pinDotsBox.classList.add('shake'); // Эффект тряски
+                    
+                    if (STATE.attempts > 0) {
+                        statusText.innerText = `Неверно! Осталось попыток: ${STATE.attempts}`;
+                        statusText.classList.add('text-danger');
+                    } else {
+                        this.lockInput(30); // Блокировка на 30 сек
+                    }
+
+                    // Очистка после тряски
+                    setTimeout(() => {
+                        pinDotsBox.classList.remove('shake');
+                        STATE.tempPin = '';
+                        this.renderDots();
+                    }, 400);
                 }
             }
         }, 200);
+    },
+
+    lockInput(seconds) {
+        STATE.isLocked = true;
+        let timeLeft = seconds;
+        const statusText = document.getElementById('pin-status');
+        
+        const timer = setInterval(() => {
+            statusText.innerText = `Блокировка: ${timeLeft} сек.`;
+            timeLeft--;
+
+            if (timeLeft < 0) {
+                clearInterval(timer);
+                STATE.isLocked = false;
+                STATE.attempts = 3;
+                statusText.innerText = "Введите код доступа";
+                statusText.classList.remove('text-danger');
+            }
+        }, 1000);
     }
 };
 
@@ -81,11 +122,10 @@ const App = {
         document.getElementById('app-screen').classList.add('active');
         this.updateUI();
         this.renderCats();
-        ThemeManager.init();
+        if (typeof ThemeManager !== 'undefined') ThemeManager.init();
     },
 
     updateUI() {
-        // 1. Расчет баланса
         let inc = 0, exp = 0;
         STATE.transactions.forEach(t => {
             if(t.type === 'income') inc += t.amount;
@@ -94,330 +134,192 @@ const App = {
 
         const balance = inc - exp;
 
-        // 2. Обновление цифр
         document.getElementById('total-balance').innerText = this.formatMoney(balance);
         document.getElementById('display-inc').innerText = this.formatMoney(inc);
         document.getElementById('display-exp').innerText = this.formatMoney(exp);
         document.getElementById('chart-bal').innerText = this.formatMoney(balance);
 
-        // 3. Списки
         this.renderHistory();
         this.renderCredits();
-        this.renderAnalysis(exp); // Новая функция
+        this.renderAnalysis(exp);
         this.drawChart(inc, exp, balance);
 
-        // 4. Тренд (простая логика)
-        const trend = document.getElementById('trend-badge');
-        if (balance >= 0) {
-            trend.className = 'trend positive';
-            trend.innerText = 'В плюсе';
-        } else {
-            trend.className = 'trend negative';
-            trend.innerText = 'Перерасход';
-        }
-
-        // 5. Сохранение
         localStorage.setItem('neoTrans', JSON.stringify(STATE.transactions));
         localStorage.setItem('neoCredits', JSON.stringify(STATE.credits));
     },
 
+    formatMoney: n => new Intl.NumberFormat('ru-RU').format(n) + ' ₸',
+
     renderHistory() {
         const list = document.getElementById('history-list');
+        if (!list) return;
         list.innerHTML = '';
-        const sorted = [...STATE.transactions].reverse();
-        
-        if(sorted.length === 0) {
-            list.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Операций пока нет</p>';
-            return;
-        }
-
-        sorted.forEach(t => {
+        [...STATE.transactions].reverse().forEach(t => {
             const el = document.createElement('div');
             el.className = 'trans-item';
-            const isInc = t.type === 'income';
-            
             el.innerHTML = `
-                <div class="trans-left">
-                    <div class="t-icon" style="background: ${t.color}">
-                        <i class="fa-solid ${t.icon}"></i>
-                    </div>
-                    <div>
-                        <div style="font-weight:700; font-size:14px;">${t.title || t.catName}</div>
-                        <div style="font-size:11px; color:var(--text-sec);">${new Date(t.id).toLocaleDateString()}</div>
-                    </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="cat-bubble" style="background:${t.color}; margin:0; width:30px; height:30px; font-size:12px;"><i class="fa-solid ${t.icon}"></i></div>
+                    <div><b style="font-size:12px;">${t.title || t.catName}</b></div>
                 </div>
-                <div style="font-weight:800; color: ${isInc ? 'var(--success)' : 'var(--text-main)'}">
-                    ${isInc ? '+' : '-'} ${this.formatMoney(t.amount)}
+                <div style="font-weight:800; font-size:13px; color:${t.type === 'income' ? 'var(--success)' : 'inherit'}">
+                    ${t.type === 'income' ? '+' : '-'} ${t.amount}
                 </div>
-                <button onclick="App.deleteTrans(${t.id})" style="border:none; background:none; color:#ccc; margin-left:10px;"><i class="fa-solid fa-trash"></i></button>
             `;
             list.appendChild(el);
         });
     },
 
-    // НОВАЯ ПОЛЕЗНАЯ ФУНКЦИЯ: Анализ категорий
     renderAnalysis(totalExp) {
         const list = document.getElementById('category-analysis');
+        if (!list) return;
         list.innerHTML = '';
+        if (totalExp === 0) return list.innerHTML = '<p style="font-size:12px; color:gray">Нет расходов</p>';
 
-        if (totalExp === 0) {
-            list.innerHTML = '<p class="empty-msg" style="text-align:center; color:#999; font-size:13px;">Расходов еще не было</p>';
-            return;
-        }
-
-        // Группируем расходы по категориям
-        let groups = {};
+        const groups = {};
         STATE.transactions.filter(t => t.type === 'expense').forEach(t => {
-            if (!groups[t.catId]) groups[t.catId] = { amount: 0, meta: t };
-            groups[t.catId].amount += t.amount;
+            if (!groups[t.catId]) groups[t.catId] = { sum: 0, meta: t };
+            groups[t.catId].sum += t.amount;
         });
 
-        // Сортируем
-        Object.values(groups).sort((a,b) => b.amount - a.amount).forEach(item => {
-            const percent = Math.round((item.amount / totalExp) * 100);
+        Object.values(groups).forEach(g => {
+            const p = Math.round((g.sum / totalExp) * 100);
             const el = document.createElement('div');
             el.className = 'bar-item';
             el.innerHTML = `
-                <div class="bar-icon">
-                    <i class="fa-solid ${item.meta.icon}" style="color: ${item.meta.color}"></i>
-                </div>
-                <div class="bar-content">
-                    <div class="bar-top">
-                        <span>${item.meta.catName}</span>
-                        <span>${this.formatMoney(item.amount)} (${percent}%)</span>
-                    </div>
-                    <div class="progress-bg">
-                        <div class="progress-fill" style="width: ${percent}%; background: ${item.meta.color}"></div>
-                    </div>
-                </div>
+                <div style="font-size:10px; width:60px; font-weight:700;">${g.meta.catName}</div>
+                <div class="progress-bg"><div class="progress-fill" style="width:${p}%; background:${g.meta.color}"></div></div>
+                <div style="font-size:10px; width:30px; text-align:right;">${p}%</div>
             `;
             list.appendChild(el);
         });
     },
 
-    renderCredits() {
-        const list = document.getElementById('credits-list');
-        list.innerHTML = '';
-        STATE.credits.forEach(c => {
-            const percent = Math.min(100, Math.round((c.paid / c.total) * 100));
-            const el = document.createElement('div');
-            el.className = 'card';
-            el.style.padding = '15px';
-            el.style.marginBottom = '10px';
-            el.innerHTML = `
-                <div style="display:flex; justify-content:space-between; font-weight:700; margin-bottom:5px;">
-                    <span>${c.name}</span>
-                    <button onclick="App.deleteCredit(${c.id})" style="border:none; background:none; color:#ccc;"><i class="fa-solid fa-times"></i></button>
-                </div>
-                <div style="font-size:12px; color:var(--text-sec); display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <span>Выплачено: ${this.formatMoney(c.paid)}</span>
-                    <span>Долг: ${this.formatMoney(c.total)}</span>
-                </div>
-                <div class="progress-bg" style="height:8px; background:var(--bg-body);">
-                    <div class="progress-fill" style="width:${percent}%; background:var(--primary);"></div>
-                </div>
-                ${c.paid < c.total ? 
-                    `<button onclick="App.payCredit(${c.id})" style="width:100%; margin-top:10px; padding:8px; border:1px solid var(--border); background:var(--bg-body); border-radius:8px; font-weight:700; font-size:12px;">Внести платеж</button>` 
-                    : '<div style="text-align:center; color:var(--success); font-size:12px; font-weight:700; margin-top:5px;">Закрыт!</div>'}
-            `;
-            list.appendChild(el);
-        });
+    updateCreditLabels() {
+        const typeInput = document.querySelector('input[name="c-type"]:checked');
+        if (!typeInput) return;
+        const type = typeInput.value;
+        const isGoal = type === 'goal';
+        document.getElementById('lbl-name').innerText = isGoal ? "На что копим?" : "Название кредита";
+        document.getElementById('lbl-total').innerText = isGoal ? "Нужная сумма" : "Сумма долга";
+        document.getElementById('lbl-paid').innerText = isGoal ? "Уже накоплено" : "Уже внесено";
+        const btn = document.querySelector('#credit-form .save-btn');
+        btn.innerText = isGoal ? "Создать цель" : "Добавить кредит";
+        btn.style.background = isGoal ? "var(--success)" : "var(--primary)";
     },
 
-    drawChart(inc, exp, balance) {
-        const ctx = document.getElementById('finance-chart').getContext('2d');
-        if (STATE.chart) STATE.chart.destroy();
-        
-        // Логика круга: показываем расходы vs остаток
-        // Если ушли в минус, круг становится красным
-        let data = [], colors = [];
-        
-        if (balance >= 0) {
-            data = [balance, exp]; // Остаток, Расход
-            colors = ['#e5e7eb', '#6366f1']; // Серый (фон), Синий (расход)
-            // Или лучше: Зеленый (остаток), Красный (расход)?
-            // Давай так: Весь круг - это доход. Сектор расхода откусывает от него.
-            // Но если дохода нет, а расход есть?
-            
-            // Упрощенная визуализация как просил:
-            data = [exp, Math.max(0, inc - exp)];
-            colors = ['#ef4444', '#10b981']; // Красный (расход), Зеленый (свободно)
-            if (inc === 0 && exp === 0) {
-                data = [1]; colors = ['#e5e7eb']; // Пустой
-            }
-        } else {
-            // Если в минусе
-            data = [1];
-            colors = ['#ef4444'];
-        }
-
-        STATE.chart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Расход', 'Свободно'],
-                datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }]
-            },
-            options: {
-                cutout: '85%',
-                plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                animation: { animateScale: true }
-            }
-        });
-    },
-
-    renderCats() {
-        const type = document.querySelector('input[name="type"]:checked').value;
-        const grid = document.getElementById('cat-grid');
-        grid.innerHTML = '';
-        
-        CONFIG.categories[type].forEach((cat, idx) => {
-            const el = document.createElement('div');
-            el.className = `cat-item ${idx === STATE.currentCat ? 'active' : ''}`;
-            el.onclick = () => {
-                STATE.currentCat = idx;
-                App.renderCats(); // перерисовка для выделения
-            };
-            el.innerHTML = `
-                <div class="cat-bubble" style="background: ${cat.color}"><i class="fa-solid ${cat.icon}"></i></div>
-                <span class="cat-name">${cat.name}</span>
-            `;
-            grid.appendChild(el);
-        });
-    },
-
-    // Действия
     addTrans(e) {
         e.preventDefault();
         const type = document.querySelector('input[name="type"]:checked').value;
         const amount = parseFloat(document.getElementById('t-amount').value);
-        const desc = document.getElementById('t-desc').value;
-        
-        if(!amount) return;
-
         const cat = CONFIG.categories[type][STATE.currentCat];
-        
-        STATE.transactions.push({
-            id: Date.now(),
-            type, amount, title: desc,
-            catName: cat.name, catIcon: cat.icon, catColor: cat.color, catId: cat.id
+        STATE.transactions.push({ 
+            id: Date.now(), type, amount, catName: cat.name, icon: cat.icon, 
+            color: cat.color, catId: cat.id, title: document.getElementById('t-desc').value 
         });
-
-        Modal.close('trans-modal');
-        e.target.reset();
-        Toast.show("Запись добавлена");
-        this.updateUI();
+        Modal.close('trans-modal'); e.target.reset(); this.updateUI();
     },
 
     addCredit(e) {
         e.preventDefault();
-        const name = document.getElementById('c-name').value;
-        const total = parseFloat(document.getElementById('c-total').value);
-        const paid = parseFloat(document.getElementById('c-paid').value) || 0;
+        const type = document.querySelector('input[name="c-type"]:checked').value;
+        STATE.credits.push({ 
+            id: Date.now(), type, 
+            name: document.getElementById('c-name').value, 
+            total: parseFloat(document.getElementById('c-total').value), 
+            paid: parseFloat(document.getElementById('c-paid').value) || 0 
+        });
+        Modal.close('credit-modal'); e.target.reset(); this.updateUI();
+    },
 
-        if(!name || !total) return;
-
-        STATE.credits.push({ id: Date.now(), name, total, paid });
-        Modal.close('credit-modal');
-        e.target.reset();
-        Toast.show("Кредит добавлен");
-        this.updateUI();
+    renderCredits() {
+        const list = document.getElementById('credits-list');
+        if (!list) return;
+        list.innerHTML = '';
+        STATE.credits.forEach(c => {
+            const p = Math.min(100, Math.round((c.paid / c.total) * 100));
+            const isGoal = c.type === 'goal';
+            const color = isGoal ? 'var(--success)' : 'var(--primary)';
+            const el = document.createElement('div');
+            el.className = 'card'; el.style.padding = '12px'; el.style.marginBottom = '8px';
+            el.innerHTML = `
+                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:800; margin-bottom:5px;">
+                    <span>${isGoal ? '🎯' : '💳'} ${c.name}</span>
+                    <span style="color:${color}">${p}%</span>
+                </div>
+                <div class="progress-bg"><div class="progress-fill" style="width:${p}%; background:${color}"></div></div>
+                <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:5px; color:gray;">
+                    <span>${this.formatMoney(c.paid)}</span><span>${this.formatMoney(c.total)}</span>
+                </div>
+                <button onclick="App.payCredit(${c.id})" style="width:100%; margin-top:8px; padding:6px; border:none; background:var(--bg-body); border-radius:8px; font-size:10px; font-weight:700;">Пополнить</button>
+            `;
+            list.appendChild(el);
+        });
     },
 
     payCredit(id) {
-        const amount = prompt("Сколько внести?");
-        if(amount) {
-            const val = parseFloat(amount);
-            const cred = STATE.credits.find(c => c.id === id);
-            if(cred) {
-                cred.paid += val;
-                // Автоматически добавляем расход
-                STATE.transactions.push({
-                    id: Date.now(), type: 'expense', amount: val, title: 'Платеж по кредиту: ' + cred.name,
-                    catName: 'Долги', catIcon: 'fa-file-invoice', catColor: '#6366f1', catId: 'debt'
-                });
-                Toast.show("Платеж внесен!");
-                this.updateUI();
-            }
-        }
-    },
-
-    deleteTrans(id) {
-        if(confirm("Удалить запись?")) {
-            STATE.transactions = STATE.transactions.filter(t => t.id !== id);
-            this.updateUI();
-        }
-    },
-    deleteCredit(id) {
-        if(confirm("Удалить кредит?")) {
-            STATE.credits = STATE.credits.filter(c => c.id !== id);
-            this.updateUI();
-        }
-    },
-    resetAll() {
-        if(confirm("Сбросить всё (включая PIN)?")) {
-            localStorage.clear();
-            location.reload();
-        }
-    },
-    clearHistory() {
-        if(confirm("Очистить историю транзакций?")) {
-            STATE.transactions = [];
+        const val = parseFloat(prompt("Сумма пополнения:"));
+        if (val) {
+            const c = STATE.credits.find(x => x.id === id);
+            c.paid += val;
+            STATE.transactions.push({ 
+                id: Date.now(), type: 'expense', amount: val, catName: c.name, 
+                icon: 'fa-coins', color: '#6366f1', catId: 'credit', title: 'Платеж: ' + c.name 
+            });
             this.updateUI();
         }
     },
 
-    formatMoney(num) {
-        return new Intl.NumberFormat('ru-RU').format(num) + ' ₸';
-    }
-};
-
-/* === МОДАЛЬНЫЕ ОКНА === */
-const Modal = {
-    open(id, type) {
-        document.getElementById(id).classList.add('open');
-        if(type && id === 'trans-modal') {
-            // Переключаем радио кнопку
-            const radios = document.getElementsByName('type');
-            radios.forEach(r => r.checked = (r.value === type));
-            App.renderCats();
-        }
+    drawChart(inc, exp, balance) {
+        const canvas = document.getElementById('finance-chart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (STATE.chart) STATE.chart.destroy();
+        const data = balance >= 0 ? [exp, balance] : [1, 0];
+        const colors = balance >= 0 ? ['#6366f1', '#10b981'] : ['#ef4444', '#eee'];
+        STATE.chart = new Chart(ctx, {
+            type: 'doughnut',
+            data: { datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }] },
+            options: { cutout: '80%', plugins: { tooltip: { enabled: false } } }
+        });
     },
-    close(id) {
-        document.getElementById(id).classList.remove('open');
-    }
-};
 
-/* === ТЕМА === */
-const ThemeManager = {
-    init() {
-        const t = localStorage.getItem('neoTheme') || 'light';
-        document.documentElement.setAttribute('data-theme', t);
+    renderCats() {
+        const typeInput = document.querySelector('input[name="type"]:checked');
+        if (!typeInput) return;
+        const type = typeInput.value;
+        const grid = document.getElementById('cat-grid'); 
+        if (!grid) return;
+        grid.innerHTML = '';
+        CONFIG.categories[type].forEach((c, i) => {
+            const el = document.createElement('div');
+            el.className = `cat-item ${i === STATE.currentCat ? 'active' : ''}`;
+            el.onclick = () => { STATE.currentCat = i; App.renderCats(); };
+            el.innerHTML = `<div class="cat-bubble" style="background:${c.color}"><i class="fa-solid ${c.icon}"></i></div><div class="cat-name">${c.name}</div>`;
+            grid.appendChild(el);
+        });
     },
-    toggle() {
-        const curr = document.documentElement.getAttribute('data-theme');
-        const next = curr === 'light' ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('neoTheme', next);
-    }
+
+    clearHistory() { if (confirm("Удалить историю?")) { STATE.transactions = []; this.updateUI(); } },
+    resetAll() { if (confirm("Сбросить всё?")) { localStorage.clear(); location.reload(); } }
 };
 
-/* === УВЕДОМЛЕНИЯ === */
-const Toast = {
-    show(msg) {
-        const con = document.getElementById('toast-container');
-        const el = document.createElement('div');
-        el.className = 'toast';
-        el.innerText = msg;
-        con.appendChild(el);
-        setTimeout(() => el.remove(), 2500);
-    }
-};
+/* ВАЖНО: Добавь это в свой style.css, чтобы работала тряска */
+/*
+.shake { animation: shake 0.4s ease-in-out; }
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    50% { transform: translateX(8px); }
+    75% { transform: translateX(-8px); }
+}
+.text-danger { color: #ef4444 !important; }
+*/
 
-/* === ЗАПУСК === */
 document.addEventListener('DOMContentLoaded', () => {
     PinManager.init();
-    
-    // Слушатели форм
-    document.getElementById('trans-form').onsubmit = (e) => App.addTrans(e);
-    document.getElementById('credit-form').onsubmit = (e) => App.addCredit(e);
+    const transForm = document.getElementById('trans-form');
+    const creditForm = document.getElementById('credit-form');
+    if (transForm) transForm.onsubmit = e => App.addTrans(e);
+    if (creditForm) creditForm.onsubmit = e => App.addCredit(e);
 });
