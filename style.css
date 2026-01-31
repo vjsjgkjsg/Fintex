@@ -132,3 +132,11 @@ input:checked + .t-btn.inc { background: var(--bg-card); color: var(--success); 
 /* Уведомление */
 #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 300; }
 .toast { background: #333; color: #fff; padding: 12px 24px; border-radius: 30px; margin-top: 10px; animation: fadeUp 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.3); font-size: 14px; font-weight: 600; }
+/* Анимация тряски */
+.shake { animation: shake 0.4s ease-in-out; border: 1px solid var(--danger); }
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    50% { transform: translateX(10px); }
+    75% { transform: translateX(-10px); }
+}
