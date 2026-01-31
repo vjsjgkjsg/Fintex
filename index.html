@@ -3,229 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NeoBank Pro | Управление Финансами</title>
+    <title>NeoBank Pro | Финансы</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+    <div id="toast-container"></div>
+
     <div id="pin-screen" class="screen active">
-        <div class="pin-container">
+        <div class="pin-content">
             <div class="logo-box">
-                <i class="fa-solid fa-vault"></i>
+                <i class="fa-solid fa-shield-halved"></i>
             </div>
-            <h1>NeoBank Pro</h1>
+            <h1 class="app-title">NeoBank Pro</h1>
             <p id="pin-status">Введите код доступа</p>
 
             <div class="pin-dots">
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
             </div>
 
             <div class="numpad">
-                <button class="num-btn" onclick="PinManager.enter(1)">1</button>
-                <button class="num-btn" onclick="PinManager.enter(2)">2</button>
-                <button class="num-btn" onclick="PinManager.enter(3)">3</button>
-                <button class="num-btn" onclick="PinManager.enter(4)">4</button>
-                <button class="num-btn" onclick="PinManager.enter(5)">5</button>
-                <button class="num-btn" onclick="PinManager.enter(6)">6</button>
-                <button class="num-btn" onclick="PinManager.enter(7)">7</button>
-                <button class="num-btn" onclick="PinManager.enter(8)">8</button>
-                <button class="num-btn" onclick="PinManager.enter(9)">9</button>
-                <button class="num-btn empty"></button>
-                <button class="num-btn" onclick="PinManager.enter(0)">0</button>
-                <button class="num-btn delete" onclick="PinManager.backspace()">
-                    <i class="fa-solid fa-delete-left"></i>
-                </button>
+                <button onclick="PinManager.enter(1)">1</button>
+                <button onclick="PinManager.enter(2)">2</button>
+                <button onclick="PinManager.enter(3)">3</button>
+                <button onclick="PinManager.enter(4)">4</button>
+                <button onclick="PinManager.enter(5)">5</button>
+                <button onclick="PinManager.enter(6)">6</button>
+                <button onclick="PinManager.enter(7)">7</button>
+                <button onclick="PinManager.enter(8)">8</button>
+                <button onclick="PinManager.enter(9)">9</button>
+                <div class="empty"></div>
+                <button onclick="PinManager.enter(0)">0</button>
+                <button onclick="PinManager.backspace()" class="del-btn"><i class="fa-solid fa-delete-left"></i></button>
             </div>
-            
-            <button class="reset-btn" onclick="App.resetAll()">Сброс данных</button>
+            <button onclick="App.resetAll()" class="reset-link">Сброс данных</button>
         </div>
     </div>
 
     <div id="app-screen" class="screen">
         
-        <aside class="sidebar">
-            <div class="brand">
-                <div class="brand-icon"><i class="fa-solid fa-wallet"></i></div>
-                <span>NeoBank</span>
+        <header class="app-header">
+            <div class="header-left">
+                <div class="logo-mini"><i class="fa-solid fa-wallet"></i></div>
+                <span class="brand-name">NeoBank</span>
             </div>
-            
-            <nav class="nav-menu">
-                <a href="#" class="nav-item active">
-                    <i class="fa-solid fa-chart-pie"></i> Обзор
-                </a>
-                <a href="#" class="nav-item" onclick="alert('Функция в разработке')">
-                    <i class="fa-solid fa-bullseye"></i> Цели
-                </a>
-                <a href="#" class="nav-item" onclick="alert('Функция в разработке')">
-                    <i class="fa-solid fa-gear"></i> Настройки
-                </a>
-            </nav>
-
-            <div class="sidebar-footer">
-                <button class="theme-toggle" onclick="ThemeManager.toggle()">
-                    <i class="fa-solid fa-moon"></i> <span>Тема</span>
-                </button>
-                <button class="logout-btn" onclick="location.reload()">
-                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Выход
-                </button>
+            <div class="header-right">
+                <button class="theme-btn" onclick="ThemeManager.toggle()"><i class="fa-solid fa-moon"></i></button>
+                <button class="logout-btn" onclick="location.reload()"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
-        </aside>
+        </header>
 
-        <main class="main-content">
-            <header class="mobile-header">
-                <div class="mobile-brand">
-                    <i class="fa-solid fa-wallet"></i> NeoBank
-                </div>
-                <button onclick="ThemeManager.toggle()" class="icon-btn">
-                    <i class="fa-solid fa-circle-half-stroke"></i>
-                </button>
-            </header>
-
-            <div class="scroll-area">
-                <div class="dashboard-grid">
+        <main class="main-scroll">
+            <div class="container">
+                
+                <section class="card balance-card">
+                    <div class="bal-header">
+                        <span>Текущий баланс</span>
+                        <div class="trend positive" id="trend-badge">+0%</div>
+                    </div>
+                    <h1 id="total-balance">0 ₸</h1>
                     
-                    <section class="card balance-card">
-                        <div class="card-header">
-                            <span class="label">Общий баланс</span>
-                            <div class="trend up">
-                                <i class="fa-solid fa-arrow-trend-up"></i> +2.5%
-                            </div>
-                        </div>
-                        <h1 id="total-balance">0 ₸</h1>
-                        
-                        <div class="action-buttons">
-                            <button class="btn btn-primary" onclick="Modal.open('transaction-modal', 'income')">
-                                <i class="fa-solid fa-plus"></i> Пополнить
-                            </button>
-                            <button class="btn btn-secondary" onclick="Modal.open('transaction-modal', 'expense')">
-                                <i class="fa-solid fa-minus"></i> Потратить
-                            </button>
-                        </div>
-                    </section>
+                    <div class="quick-actions">
+                        <button class="action-btn inc" onclick="Modal.open('trans-modal', 'income')">
+                            <i class="fa-solid fa-arrow-down"></i> Пополнить
+                        </button>
+                        <button class="action-btn exp" onclick="Modal.open('trans-modal', 'expense')">
+                            <i class="fa-solid fa-arrow-up"></i> Потратить
+                        </button>
+                    </div>
+                </section>
 
-                    <section class="stats-row">
-                        <div class="stat-box income">
-                            <div class="icon-circle"><i class="fa-solid fa-arrow-down"></i></div>
-                            <div class="stat-info">
-                                <span>Доходы</span>
-                                <h3 id="income-display">0 ₸</h3>
+                <div class="grid-2">
+                    <div class="stats-col">
+                        <div class="card stat-card">
+                            <div class="icon-box green"><i class="fa-solid fa-wallet"></i></div>
+                            <div>
+                                <p>Доходы</p>
+                                <h3 id="display-inc">0 ₸</h3>
                             </div>
                         </div>
-                        <div class="stat-box expense">
-                            <div class="icon-circle"><i class="fa-solid fa-arrow-up"></i></div>
-                            <div class="stat-info">
-                                <span>Расходы</span>
-                                <h3 id="expense-display">0 ₸</h3>
+                        <div class="card stat-card">
+                            <div class="icon-box red"><i class="fa-solid fa-fire"></i></div>
+                            <div>
+                                <p>Расходы</p>
+                                <h3 id="display-exp">0 ₸</h3>
                             </div>
                         </div>
-                    </section>
+                    </div>
 
-                    <section class="card chart-card">
-                        <h3>Структура финансов</h3>
-                        <div class="chart-wrapper">
+                    <div class="card chart-card">
+                        <h3>Бюджет</h3>
+                        <div class="chart-container">
                             <canvas id="finance-chart"></canvas>
-                            <div class="chart-center-text">
-                                <span class="chart-label">Остаток</span>
-                                <span class="chart-value" id="chart-center-val">0</span>
+                            <div class="chart-center">
+                                <span>Остаток</span>
+                                <b id="chart-bal">0</b>
                             </div>
                         </div>
-                        <div class="chart-legend" id="chart-legend">
-                            </div>
-                    </section>
-
-                    <section class="card credits-card">
-                        <div class="card-title-row">
-                            <h3>Кредиты и Долги</h3>
-                            <button class="btn-sm" onclick="Modal.open('credit-modal')">+ Добавить</button>
-                        </div>
-                        <div id="credits-list" class="list-container">
-                            </div>
-                    </section>
-
-                    <section class="card history-card full-width">
-                        <div class="card-title-row">
-                            <h3>История операций</h3>
-                            <button class="text-btn danger" onclick="App.clearHistory()">Очистить</button>
-                        </div>
-                        <div id="transactions-list" class="transactions-container">
-                            </div>
-                    </section>
-
+                    </div>
                 </div>
+
+                <section class="card analysis-card">
+                    <h3>Куда уходят деньги?</h3>
+                    <div id="category-analysis" class="cat-bars-list">
+                        <p class="empty-msg">Нет данных о расходах</p>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-head">
+                        <h3>Кредиты / Цели</h3>
+                        <button class="small-btn" onclick="Modal.open('credit-modal')">+ Добавить</button>
+                    </div>
+                    <div id="credits-list" class="items-list">
+                        </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-head">
+                        <h3>История операций</h3>
+                        <button class="text-danger" onclick="App.clearHistory()">Очистить</button>
+                    </div>
+                    <div id="history-list" class="history-list">
+                        </div>
+                </section>
+
             </div>
         </main>
     </div>
 
-    <div id="transaction-modal" class="modal-overlay">
-        <div class="modal-window">
-            <div class="modal-header">
-                <h2 id="modal-title">Новая запись</h2>
-                <button class="close-btn" onclick="Modal.close('transaction-modal')"><i class="fa-solid fa-xmark"></i></button>
+    <div id="trans-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="m-head">
+                <h2>Новая операция</h2>
+                <button class="close-icon" onclick="Modal.close('trans-modal')"><i class="fa-solid fa-xmark"></i></button>
             </div>
+            
             <form id="trans-form">
-                <div class="type-switcher">
+                <div class="toggle-type">
                     <label>
-                        <input type="radio" name="type" value="expense" checked onchange="App.renderCategories()">
-                        <span class="sw-btn expense">Расход</span>
+                        <input type="radio" name="type" value="expense" checked onchange="App.renderCats()">
+                        <span class="t-btn exp">Расход</span>
                     </label>
                     <label>
-                        <input type="radio" name="type" value="income" onchange="App.renderCategories()">
-                        <span class="sw-btn income">Доход</span>
+                        <input type="radio" name="type" value="income" onchange="App.renderCats()">
+                        <span class="t-btn inc">Доход</span>
                     </label>
                 </div>
 
-                <div class="input-group large">
-                    <label>Сумма</label>
+                <div class="inp-group big">
                     <input type="number" id="t-amount" placeholder="0" required>
-                    <span class="currency">₸</span>
+                    <span class="suffix">₸</span>
+                </div>
+                
+                <div class="inp-group">
+                    <input type="text" id="t-desc" placeholder="Комментарий (необязательно)">
                 </div>
 
-                <div class="input-group">
-                    <label>Комментарий</label>
-                    <input type="text" id="t-desc" placeholder="На что потрачено?">
-                </div>
+                <p class="label-sm">Категория</p>
+                <div class="cat-grid" id="cat-grid"></div>
 
-                <div class="categories-section">
-                    <label>Категория</label>
-                    <div class="cat-grid" id="category-grid">
-                        </div>
-                </div>
-
-                <button type="submit" class="btn-submit">Сохранить</button>
+                <button type="submit" class="save-btn">Сохранить</button>
             </form>
         </div>
     </div>
 
     <div id="credit-modal" class="modal-overlay">
-        <div class="modal-window">
-            <div class="modal-header">
-                <h2>Добавить обязательство</h2>
-                <button class="close-btn" onclick="Modal.close('credit-modal')"><i class="fa-solid fa-xmark"></i></button>
+        <div class="modal-box">
+            <div class="m-head">
+                <h2>Добавить долг/кредит</h2>
+                <button class="close-icon" onclick="Modal.close('credit-modal')"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form id="credit-form">
-                <div class="input-group">
+                <div class="inp-group">
                     <label>Название</label>
-                    <input type="text" id="c-name" placeholder="Банк или Имя" required>
+                    <input type="text" id="c-name" placeholder="Например: Kaspi Gold" required>
                 </div>
                 <div class="row">
-                    <div class="input-group">
-                        <label>Общая сумма</label>
+                    <div class="inp-group">
+                        <label>Сумма долга</label>
                         <input type="number" id="c-total" placeholder="0" required>
                     </div>
-                    <div class="input-group">
-                        <label>Уже отдано</label>
-                        <input type="number" id="c-paid" placeholder="0" value="0">
+                    <div class="inp-group">
+                        <label>Уже вернул</label>
+                        <input type="number" id="c-paid" placeholder="0">
                     </div>
                 </div>
-                <button type="submit" class="btn-submit">Создать</button>
+                <button type="submit" class="save-btn">Добавить</button>
             </form>
         </div>
     </div>
